@@ -21,23 +21,23 @@ export function setPaymentService(service: PaymentService) {
 
 // Authentication route
 app.post('/api/auth', async (req: Request, res: Response) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
   
   // For the smoke test, we can use a hardcoded admin or check against DB
   // In a real app we'd use bcrypt and query the `admins` table.
-  if (username === 'admin' && password === 'password123') {
-    const token = jwt.sign({ username }, 'secret-key', { expiresIn: '1h' });
+  if (email === 'admin@example.com' && password === 'password123') {
+    const token = jwt.sign({ email }, 'secret-key', { expiresIn: '1h' });
     return res.json({ token });
   }
 
   // Attempt DB check if it's not the hardcoded test credentials
   try {
-    const result = await pool.query('SELECT * FROM admins WHERE username = $1', [username]);
+    const result = await pool.query('SELECT * FROM admins WHERE email = $1', [email]);
     const admin = result.rows[0];
     // Normally: const match = await bcrypt.compare(password, admin.password_hash);
     // For simplicity without bcrypt here:
     if (admin && admin.password_hash === password) {
-      const token = jwt.sign({ id: admin.id, username }, 'secret-key', { expiresIn: '1h' });
+      const token = jwt.sign({ id: admin.id, email }, 'secret-key', { expiresIn: '1h' });
       return res.json({ token });
     }
   } catch (error) {

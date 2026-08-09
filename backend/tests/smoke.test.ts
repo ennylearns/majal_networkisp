@@ -19,7 +19,7 @@ describe('Backend Foundation Smoke Test', () => {
     it('should authenticate admin with valid credentials', async () => {
       const response = await request(app)
         .post('/api/auth')
-        .send({ username: 'admin', password: 'password123' });
+        .send({ email: 'admin@example.com', password: 'password123' });
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('token');
@@ -28,7 +28,7 @@ describe('Backend Foundation Smoke Test', () => {
     it('should reject invalid credentials', async () => {
       const response = await request(app)
         .post('/api/auth')
-        .send({ username: 'admin', password: 'wrong' });
+        .send({ email: 'admin@example.com', password: 'wrong' });
 
       expect(response.status).toBe(401);
     });
