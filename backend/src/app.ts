@@ -6,6 +6,7 @@ import { PaymentService, FakePaymentService } from './services/PaymentService';
 import { pool } from './db';
 import { ProvisioningService } from './services/ProvisioningService';
 import { generateRscScript } from './services/RscGenerator';
+import { voucherService } from './services/VoucherService';
 
 const provisioningService = new ProvisioningService();
 
@@ -324,6 +325,22 @@ app.get('/api/payments', async (req: Request, res: Response) => {
     return res.json(result.rows);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch payments' });
+  }
+});
+
+app.post('/api/transactions/:reference/voucher', async (req: Request, res: Response) => {
+  const reference = req.params.reference as string;
+  try {
+    const code = await voucherService.issueVoucherForTransaction(reference);
+    return res.status(201).json({ code });
+  } catch (error: any) {
+    if (error.message === 'Transaction not found') {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message === 'Transaction is not successful' || error.message === 'Voucher already issued for this transaction') {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Failed to issue voucher' });
   }
 });
 
