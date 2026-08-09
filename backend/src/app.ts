@@ -328,6 +328,55 @@ app.get('/api/payments', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/payments/:reference', async (req: Request, res: Response) => {
+  const reference = req.params.reference as string;
+  try {
+    let result = await pool.query(`
+      SELECT t.*, v.activation_status 
+      FROM transactions t
+      LEFT JOIN vouchers v ON t.id = v.transaction_id
+      WHERE t.paystack_reference = $1
+    `, [reference]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    let tx = result.rows[0];
+
+    // Fallback: if pending, check threshold
+    if (tx.status === 'pending') {
+      const createdAt = new Date(tx.created_at).getTime();
+      const now = Date.now();
+      const thresholdMs = 10000; // 10 seconds
+
+      if (now - createdAt > thresholdMs) {
+        // Fallback to direct Paystack verification
+        try {
+          const verifyResult = await paymentService.verifyTransaction(reference);
+          if (verifyResult.status === 'success') {
+            await pool.query(`
+              UPDATE transactions 
+              SET status = 'successful', webhook_received_at = CURRENT_TIMESTAMP
+              WHERE paystack_reference = $1 AND status = 'pending'
+            `, [reference]);
+            tx.status = 'successful';
+          }
+        } catch (error) {
+          console.error('Fallback verification failed:', error);
+        }
+      }
+    }
+
+    return res.json({
+      status: tx.status,
+      activation_status: tx.activation_status || null
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch payment status' });
+  }
+});
+
 app.post('/api/transactions/:reference/voucher', async (req: Request, res: Response) => {
   const reference = req.params.reference as string;
   try {

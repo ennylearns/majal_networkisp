@@ -87,6 +87,16 @@ const renderApp = async () => {
           </form>
         </div>
       </div>
+
+      <div id="status-modal" class="modal hidden">
+        <div class="modal-content" style="text-align: center;">
+          <h2 id="status-title">Processing</h2>
+          <div class="spinner" id="status-spinner" style="margin: 20px auto;"></div>
+          <p id="status-message">Please wait...</p>
+          <div id="voucher-display" class="hidden" style="margin-top: 20px; padding: 20px; background: #f0f0f0; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 2px;"></div>
+          <button id="status-close-btn" class="pay-btn hidden" onclick="closeStatusModal()" style="margin-top: 20px;">Close</button>
+        </div>
+      </div>
     </div>
   `;
 
@@ -203,4 +213,90 @@ const renderApp = async () => {
   document.getElementById('checkout-modal')!.classList.add('hidden');
 };
 
+(window as any).closeStatusModal = () => {
+  document.getElementById('status-modal')!.classList.add('hidden');
+  // Clean URL without refreshing
+  window.history.replaceState({}, document.title, window.location.pathname);
+};
+
 renderApp();
+
+// Handle Paystack redirect callback
+const urlParams = new URLSearchParams(window.location.search);
+const reference = urlParams.get('reference');
+
+if (reference) {
+  const statusModal = document.getElementById('status-modal')!;
+  const statusTitle = document.getElementById('status-title')!;
+  const statusMessage = document.getElementById('status-message')!;
+  const statusSpinner = document.getElementById('status-spinner')!;
+  const voucherDisplay = document.getElementById('voucher-display')!;
+  const statusCloseBtn = document.getElementById('status-close-btn')!;
+  
+  statusModal.classList.remove('hidden');
+  statusTitle.textContent = 'Verifying Payment';
+  statusMessage.textContent = 'Waiting for payment confirmation...';
+  
+  let attempts = 0;
+  const maxAttempts = 45; // 90 seconds (2s interval)
+  let voucherCodeFetched = false;
+  let voucherCode: string | null = null;
+  
+  const pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/payments/${reference}`);
+      if (!res.ok) throw new Error('Failed to fetch status');
+      const data = await res.json();
+      
+      if (data.status === 'successful') {
+        if (!voucherCodeFetched) {
+          voucherCodeFetched = true;
+          try {
+            const vRes = await fetch(`/api/transactions/${reference}/voucher`, { method: 'POST' });
+            if (vRes.ok) {
+              const vData = await vRes.json();
+              voucherCode = vData.code;
+            }
+          } catch (e) {
+            console.error('Failed to issue voucher', e);
+          }
+        }
+
+        if (data.activation_status === 'ACTIVATED') {
+          clearInterval(pollInterval);
+          statusTitle.textContent = 'Internet Activated!';
+          statusSpinner.classList.add('hidden');
+          
+          if (voucherCode) {
+            statusMessage.textContent = 'Here is your unique voucher code. Please save it!';
+            voucherDisplay.textContent = voucherCode;
+            voucherDisplay.classList.remove('hidden');
+          } else {
+            statusMessage.textContent = 'Your device has been activated. (Voucher was already issued previously)';
+          }
+          statusCloseBtn.classList.remove('hidden');
+        } else if (data.activation_status === 'FAILED') {
+          clearInterval(pollInterval);
+          statusTitle.textContent = 'Activation Failed';
+          statusSpinner.classList.add('hidden');
+          statusMessage.textContent = 'Payment was successful, but router activation failed. Please contact support.';
+          statusCloseBtn.classList.remove('hidden');
+        } else {
+          statusTitle.textContent = 'Activating...';
+          statusMessage.textContent = 'Payment received, activation in progress...';
+        }
+      } else {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          statusTitle.textContent = 'Timeout';
+          statusSpinner.classList.add('hidden');
+          statusMessage.textContent = 'Payment confirmation is taking longer than expected. Please check back later or contact support.';
+          statusCloseBtn.classList.remove('hidden');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, 2000);
+}
