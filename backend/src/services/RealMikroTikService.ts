@@ -36,7 +36,7 @@ export class RealMikroTikService implements MikroTikService {
     return true;
   }
 
-  async createProfile(routerId: number, name: string, rateLimit: string): Promise<boolean> {
+  async createProfile(routerId: number, name: string, rateLimit: string, sessionDuration?: string, dataLimit?: string): Promise<boolean> {
     return true;
   }
 

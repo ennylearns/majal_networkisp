@@ -175,4 +175,76 @@ app.get('/api/dashboard/stats', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/api/plans', async (req: Request, res: Response) => {
+  const { name, price, data_allowance, duration, download_speed, upload_speed } = req.body;
+  
+  try {
+    const mikrotik_profile_name = name.replace(/\s+/g, '_');
+    
+    // Create the plan
+    const result = await pool.query(`
+      INSERT INTO plans (name, price, data_allowance, duration, download_speed, upload_speed, mikrotik_profile_name, enabled)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+      RETURNING *
+    `, [name, price, data_allowance, duration, download_speed, upload_speed, mikrotik_profile_name]);
+    
+    const plan = result.rows[0];
+
+    // Push the profile to all routers
+    const routersResult = await pool.query(`SELECT id FROM routers`);
+    const routers = routersResult.rows;
+
+    const rateLimit = `${upload_speed || '0'}/${download_speed || '0'}`;
+    const sessionDuration = duration ? `${duration}d` : undefined; // Assuming duration in days for this example
+    const dataLimit = data_allowance ? data_allowance.toString() : undefined;
+
+    for (const router of routers) {
+      try {
+        await mikroTikService.createProfile(router.id, mikrotik_profile_name, rateLimit, sessionDuration, dataLimit);
+      } catch (err) {
+        console.error(`Failed to push profile to router ${router.id}`);
+      }
+    }
+
+    return res.status(201).json({ plan });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to create plan' });
+  }
+});
+
+app.put('/api/plans/:id/enable', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('UPDATE plans SET enabled = true WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+    return res.json({ plan: result.rows[0] });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to enable plan' });
+  }
+});
+
+app.put('/api/plans/:id/disable', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('UPDATE plans SET enabled = false WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+    return res.json({ plan: result.rows[0] });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to disable plan' });
+  }
+});
+
+app.get('/api/plans', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query('SELECT * FROM plans ORDER BY id ASC');
+    return res.json(result.rows);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch plans' });
+  }
+});
+
 export { app, mikroTikService, paymentService };

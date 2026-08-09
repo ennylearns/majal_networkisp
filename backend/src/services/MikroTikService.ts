@@ -3,7 +3,7 @@ export interface MikroTikService {
   deleteUser(routerId: number, username: string): Promise<boolean>;
   disableUser(routerId: number, username: string): Promise<boolean>;
   enableUser(routerId: number, username: string): Promise<boolean>;
-  createProfile(routerId: number, name: string, rateLimit: string): Promise<boolean>;
+  createProfile(routerId: number, name: string, rateLimit: string, sessionDuration?: string, dataLimit?: string): Promise<boolean>;
   getUsers(routerId: number): Promise<any[]>;
   getActiveSessions(routerId: number): Promise<any[]>;
   disconnectUser(routerId: number, username: string): Promise<boolean>;
@@ -54,7 +54,7 @@ export class FakeMikroTikService implements MikroTikService {
     return true;
   }
 
-  async createProfile(routerId: number, name: string, rateLimit: string): Promise<boolean> {
+  async createProfile(routerId: number, name: string, rateLimit: string, sessionDuration?: string, dataLimit?: string): Promise<boolean> {
     await this.simulateNetworkCall();
     return true;
   }
