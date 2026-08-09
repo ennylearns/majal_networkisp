@@ -6,10 +6,10 @@
 
 **Status:** ready-for-agent
 
-- [ ] Customer can select a plan and initiate a Paystack payment from the captive portal, providing phone number and email (required fields)
-- [ ] `/api/webhooks/paystack` verifies payment via Paystack webhook signature, not frontend confirmation
-- [ ] Tampered/forged webhook payloads are rejected (tested against known-good and tampered payloads)
-- [ ] Duplicate webhook deliveries are idempotent — do not create a second transaction
-- [ ] `transactions.status` (`pending/successful/failed/cancelled/refunded`) is tracked and reachable to `SUCCESSFUL` independent of MikroTik reachability
-- [ ] Admin can view all transactions with status via `/api/payments`
-- [ ] Phone/email captured at checkout create-or-match a lightweight `customers` record (exact match only, no dedup/fuzzy logic)
+- [x] Customer can select a plan and initiate a Paystack payment from the captive portal, providing phone number and email (required fields)
+- [x] `/api/webhooks/paystack` verifies payment via Paystack webhook signature, not frontend confirmation
+- [x] Tampered/forged webhook payloads are rejected (tested against known-good and tampered payloads)
+- [x] Duplicate webhook deliveries are idempotent — do not create a second transaction
+- [x] `transactions.status` (`pending/successful/failed/cancelled/refunded`) is tracked and reachable to `SUCCESSFUL` independent of MikroTik reachability
+- [x] Admin can view all transactions with status via `/api/payments`
+- [x] Phone/email captured at checkout create-or-match a lightweight `customers` record (exact match only, no dedup/fuzzy logic)

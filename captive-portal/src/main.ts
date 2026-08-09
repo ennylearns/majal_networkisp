@@ -66,8 +66,56 @@ const renderApp = async () => {
           </div>
         </div>
       </div>
+
+      <div id="checkout-modal" class="modal hidden">
+        <div class="modal-content">
+          <span class="close-btn" onclick="closeModal()">&times;</span>
+          <h2>Checkout</h2>
+          <p id="checkout-plan-name"></p>
+          <p id="checkout-plan-price" style="color: var(--primary); font-weight: bold; margin-bottom: 1rem;"></p>
+          <form id="checkout-form">
+            <input type="hidden" id="checkout-plan-id" />
+            <div class="form-group">
+              <label for="checkout-email">Email</label>
+              <input type="email" id="checkout-email" required />
+            </div>
+            <div class="form-group">
+              <label for="checkout-phone">Phone Number</label>
+              <input type="tel" id="checkout-phone" required />
+            </div>
+            <button type="submit" class="pay-btn" id="pay-btn">Pay with Paystack</button>
+          </form>
+        </div>
+      </div>
     </div>
   `;
+
+  document.getElementById('checkout-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('pay-btn') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    const planId = (document.getElementById('checkout-plan-id') as HTMLInputElement).value;
+    const email = (document.getElementById('checkout-email') as HTMLInputElement).value;
+    const phoneNumber = (document.getElementById('checkout-phone') as HTMLInputElement).value;
+
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: Number(planId), email, phoneNumber })
+      });
+      if (!res.ok) throw new Error('Checkout failed');
+      const data = await res.json();
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
+      console.error(err);
+      alert('Checkout failed. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Pay with Paystack';
+    }
+  });
 
   try {
     const response = await fetch('/api/plans');
@@ -86,7 +134,7 @@ const renderApp = async () => {
     }
 
     plansContainer.innerHTML = plans.map(plan => `
-      <div class="plan-card">
+      <div class="plan-card" onclick="selectPlan('${plan.id}', '${plan.name}', ${plan.price})">
         <div class="plan-header">
           <div class="plan-name">${plan.name}</div>
           <div class="plan-price">${formatPrice(plan.price)}</div>
@@ -142,6 +190,17 @@ const renderApp = async () => {
       </div>
     `;
   }
+};
+
+(window as any).selectPlan = (id: string, name: string, price: number) => {
+  document.getElementById('checkout-plan-id')!.setAttribute('value', id);
+  document.getElementById('checkout-plan-name')!.textContent = `Plan: ${name}`;
+  document.getElementById('checkout-plan-price')!.textContent = `Price: ${formatPrice(price)}`;
+  document.getElementById('checkout-modal')!.classList.remove('hidden');
+};
+
+(window as any).closeModal = () => {
+  document.getElementById('checkout-modal')!.classList.add('hidden');
 };
 
 renderApp();

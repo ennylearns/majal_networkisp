@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { MikroTikService, FakeMikroTikService } from './services/MikroTikService';
 import { PaymentService, FakePaymentService } from './services/PaymentService';
 import { pool } from './db';
@@ -244,6 +245,85 @@ app.get('/api/plans', async (req: Request, res: Response) => {
     return res.json(result.rows);
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch plans' });
+  }
+});
+
+app.post('/api/checkout', async (req: Request, res: Response) => {
+  const { planId, email, phoneNumber } = req.body;
+  if (!planId || !email || !phoneNumber) {
+    return res.status(400).json({ error: 'planId, email, and phoneNumber are required' });
+  }
+
+  try {
+    const planResult = await pool.query('SELECT * FROM plans WHERE id = $1', [planId]);
+    if (planResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+    const plan = planResult.rows[0];
+
+    let customerResult = await pool.query('SELECT * FROM customers WHERE email = $1', [email]);
+    let customerId;
+    if (customerResult.rows.length === 0) {
+      const insertCustomer = await pool.query(
+        'INSERT INTO customers (email, phone_number) VALUES ($1, $2) RETURNING id',
+        [email, phoneNumber]
+      );
+      customerId = insertCustomer.rows[0].id;
+    } else {
+      customerId = customerResult.rows[0].id;
+    }
+
+    const reference = crypto.randomUUID();
+    
+    await pool.query(
+      'INSERT INTO transactions (customer_id, plan_id, paystack_reference, amount, status) VALUES ($1, $2, $3, $4, $5)',
+      [customerId, planId, reference, plan.price, 'pending']
+    );
+
+    const checkout = await paymentService.initialize(plan.price, email, reference);
+    
+    return res.json({ checkoutUrl: checkout.checkoutUrl, reference });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to initialize checkout' });
+  }
+});
+
+app.post('/api/webhooks/paystack', async (req: Request, res: Response) => {
+  const signature = req.headers['x-paystack-signature'] as string;
+  const payload = req.body;
+
+  if (!paymentService.verifyWebhook(payload, signature)) {
+    return res.status(400).json({ error: 'Invalid signature' });
+  }
+
+  if (payload.event === 'charge.success') {
+    const { reference } = payload.data;
+    try {
+      await pool.query(`
+        UPDATE transactions 
+        SET status = 'successful', webhook_received_at = CURRENT_TIMESTAMP
+        WHERE paystack_reference = $1 AND status = 'pending'
+      `, [reference]);
+    } catch (error) {
+      return res.status(500).json({ error: 'Failed to process webhook' });
+    }
+  }
+
+  return res.sendStatus(200);
+});
+
+app.get('/api/payments', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT t.*, c.email, c.phone_number, p.name as plan_name
+      FROM transactions t
+      JOIN customers c ON t.customer_id = c.id
+      JOIN plans p ON t.plan_id = p.id
+      ORDER BY t.created_at DESC
+    `);
+    return res.json(result.rows);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch payments' });
   }
 });
 
