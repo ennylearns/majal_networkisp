@@ -1,4 +1,4 @@
-# 10 — Admin voucher support & customer lookup
+# 11 — Admin voucher support & customer lookup
 
 **What to build:** An admin can manually disable a voucher (e.g. for fraud or support requests) and look up a customer's voucher history by phone number or email, so repeat customers and support requests are easy to trace.
 

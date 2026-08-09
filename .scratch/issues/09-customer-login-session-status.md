@@ -1,8 +1,8 @@
-# 08 — Customer login & session status
+# 09 — Customer login & session status
 
 **What to build:** A customer logs into the hotspot using their voucher code (used as both username and password) and can see their remaining data/time/session status.
 
-**Blocked by:** 07 — Voucher generation & MikroTik activation
+**Blocked by:** 08 — Payment status polling & voucher delivery
 
 **Status:** ready-for-agent
 
