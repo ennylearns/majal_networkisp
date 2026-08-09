@@ -393,4 +393,90 @@ app.post('/api/transactions/:reference/voucher', async (req: Request, res: Respo
   }
 });
 
+app.post('/api/sessions/login', async (req: Request, res: Response) => {
+  const { voucherCode, ipAddress, macAddress } = req.body;
+  if (!voucherCode) return res.status(400).json({ error: 'Voucher code is required' });
+
+  try {
+    const hash = voucherService.hashVoucher(voucherCode);
+    const result = await pool.query('SELECT * FROM vouchers WHERE code_hash = $1', [hash]);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid voucher code' });
+    }
+
+    const voucher = result.rows[0];
+
+    if (voucher.activation_status !== 'ACTIVATED') {
+      return res.status(401).json({ error: 'Voucher is not yet activated on the network' });
+    }
+
+    if (voucher.status === 'expired') {
+      return res.status(401).json({ error: 'Voucher is expired' });
+    }
+    if (voucher.status === 'exhausted') {
+      return res.status(401).json({ error: 'Voucher data exhausted' });
+    }
+    if (voucher.status === 'disabled') {
+      return res.status(401).json({ error: 'Voucher is disabled' });
+    }
+
+    if (voucher.status === 'unused') {
+      await pool.query('UPDATE vouchers SET status = $1 WHERE id = $2', ['active', voucher.id]);
+      voucher.status = 'active';
+    }
+
+    const sessionToken = jwt.sign({ voucherId: voucher.id, ipAddress, macAddress }, 'secret-key', { expiresIn: '24h' });
+
+    await pool.query(
+      `INSERT INTO sessions (voucher_id, router_id, username, ip_address, mac_address) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [voucher.id, voucher.router_id, voucherCode, ipAddress, macAddress]
+    );
+
+    return res.json({ success: true, sessionToken });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to process login' });
+  }
+});
+
+app.get('/api/sessions', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const payload = jwt.verify(token, 'secret-key') as any;
+    const result = await pool.query(`
+      SELECT v.status, s.ip_address, s.mac_address, s.data_used, s.started_at, p.data_allowance, p.duration
+      FROM sessions s
+      JOIN vouchers v ON s.voucher_id = v.id
+      LEFT JOIN plans p ON v.plan_id = p.id
+      WHERE s.voucher_id = $1
+      ORDER BY s.started_at DESC LIMIT 1
+    `, [payload.voucherId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    const session = result.rows[0];
+    
+    return res.json({
+      voucherStatus: session.status,
+      ipAddress: session.ip_address,
+      macAddress: session.mac_address,
+      dataUsed: session.data_used,
+      dataAllowance: session.data_allowance,
+      startedAt: session.started_at,
+      duration: session.duration
+    });
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
 export { app, mikroTikService, paymentService };

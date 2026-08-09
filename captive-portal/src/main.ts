@@ -44,6 +44,77 @@ const Icons = {
 
 const renderApp = async () => {
   const app = document.querySelector<HTMLDivElement>('#app')!;
+  const sessionToken = localStorage.getItem('majal_session_token');
+  const urlParams = new URLSearchParams(window.location.search);
+  const reference = urlParams.get('reference');
+
+  if (sessionToken && !reference) {
+    app.innerHTML = `
+      <div class="portal-container">
+        <div class="header">
+          <div class="header-logo">M</div>
+          <div class="status-badge" id="session-badge">
+            <div class="status-dot"></div>
+            Loading Session...
+          </div>
+          <h1>Session Status</h1>
+        </div>
+        
+        <div id="session-details" class="plans-grid">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p>Fetching your session...</p>
+          </div>
+        </div>
+        
+        <button class="pay-btn" onclick="logout()" style="background: rgba(239, 68, 68, 0.1); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.2); margin-top: 2rem;">Logout / Disconnect</button>
+      </div>
+    `;
+
+    (window as any).logout = () => {
+      localStorage.removeItem('majal_session_token');
+      let logoutUrl = urlParams.get('link-logout') || 'http://192.168.88.1/logout';
+      window.location.href = logoutUrl;
+    };
+
+    try {
+      const res = await fetch('/api/sessions', {
+        headers: { 'Authorization': `Bearer ${sessionToken}` }
+      });
+      if (!res.ok) throw new Error('Session invalid');
+      const data = await res.json();
+      
+      const badge = document.getElementById('session-badge')!;
+      badge.innerHTML = `<div class="status-dot"></div> ${data.voucherStatus.toUpperCase()}`;
+      if (data.voucherStatus !== 'active') {
+        badge.style.color = '#F87171';
+        badge.style.background = 'rgba(239, 68, 68, 0.1)';
+      }
+
+      document.getElementById('session-details')!.innerHTML = `
+        <div class="plan-card">
+          <div class="plan-features" style="grid-template-columns: 1fr; gap: 1rem;">
+            <div class="feature" style="justify-content: space-between; font-size: 1rem;">
+              <span style="color: #fff">Data Used:</span>
+              <span>${formatBytes(data.dataUsed)} / ${formatBytes(data.dataAllowance)}</span>
+            </div>
+            <div class="feature" style="justify-content: space-between; font-size: 1rem;">
+              <span style="color: #fff">Started At:</span>
+              <span>${new Date(data.startedAt).toLocaleString()}</span>
+            </div>
+            <div class="feature" style="justify-content: space-between; font-size: 1rem;">
+              <span style="color: #fff">IP Address:</span>
+              <span>${data.ipAddress || 'Unknown'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      localStorage.removeItem('majal_session_token');
+      window.location.reload();
+    }
+    return;
+  }
   
   app.innerHTML = `
     <div class="portal-container">
@@ -58,7 +129,10 @@ const renderApp = async () => {
       </div>
       
       <div class="plans-section">
-        <h2>Available Plans</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h2 style="margin-bottom: 0;">Available Plans</h2>
+          <button class="pay-btn" style="width: auto; margin-top: 0; padding: 0.5rem 1rem;" onclick="openLoginModal()">Have a Voucher?</button>
+        </div>
         <div id="plans-container" class="plans-grid">
           <div class="loading">
             <div class="spinner"></div>
@@ -97,8 +171,87 @@ const renderApp = async () => {
           <button id="status-close-btn" class="pay-btn hidden" onclick="closeStatusModal()" style="margin-top: 20px;">Close</button>
         </div>
       </div>
+      <div id="login-modal" class="modal hidden">
+        <div class="modal-content">
+          <span class="close-btn" onclick="closeLoginModal()">&times;</span>
+          <h2>Voucher Login</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Enter your voucher code to access the internet.</p>
+          <div id="login-error" class="error-message hidden" style="margin-bottom: 1rem;"></div>
+          <form id="login-form">
+            <div class="form-group">
+              <label for="login-voucher">Voucher Code</label>
+              <input type="text" id="login-voucher" required placeholder="e.g. A1B2C3" style="text-transform: uppercase;" />
+            </div>
+            <button type="submit" class="pay-btn" id="login-btn">Login</button>
+          </form>
+        </div>
+      </div>
     </div>
   `;
+
+  document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn') as HTMLButtonElement;
+    const errorDiv = document.getElementById('login-error')!;
+    const voucherInput = document.getElementById('login-voucher') as HTMLInputElement;
+    const voucherCode = voucherInput.value.toUpperCase();
+
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+    errorDiv.classList.add('hidden');
+
+    try {
+      const res = await fetch('/api/sessions/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voucherCode })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      localStorage.setItem('majal_session_token', data.sessionToken);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      let loginUrl = urlParams.get('link-login') || 'http://192.168.88.1/login';
+      
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = loginUrl;
+      
+      const userField = document.createElement('input');
+      userField.type = 'hidden';
+      userField.name = 'username';
+      userField.value = voucherCode;
+      
+      const passField = document.createElement('input');
+      passField.type = 'hidden';
+      passField.name = 'password';
+      passField.value = voucherCode;
+      
+      const dstField = document.createElement('input');
+      dstField.type = 'hidden';
+      dstField.name = 'dst';
+      dstField.value = urlParams.get('link-orig') || 'https://www.google.com';
+
+      form.appendChild(userField);
+      form.appendChild(passField);
+      form.appendChild(dstField);
+      document.body.appendChild(form);
+      
+      btn.textContent = 'Connecting...';
+      form.submit();
+
+    } catch (err: any) {
+      errorDiv.textContent = err.message;
+      errorDiv.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Login';
+    }
+  });
 
   document.getElementById('checkout-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -215,15 +368,21 @@ const renderApp = async () => {
 
 (window as any).closeStatusModal = () => {
   document.getElementById('status-modal')!.classList.add('hidden');
-  // Clean URL without refreshing
   window.history.replaceState({}, document.title, window.location.pathname);
+};
+
+(window as any).openLoginModal = () => {
+  document.getElementById('login-modal')!.classList.remove('hidden');
+};
+
+(window as any).closeLoginModal = () => {
+  document.getElementById('login-modal')!.classList.add('hidden');
 };
 
 renderApp();
 
-// Handle Paystack redirect callback
-const urlParams = new URLSearchParams(window.location.search);
-const reference = urlParams.get('reference');
+const pollUrlParams = new URLSearchParams(window.location.search);
+const reference = pollUrlParams.get('reference');
 
 if (reference) {
   const statusModal = document.getElementById('status-modal')!;
