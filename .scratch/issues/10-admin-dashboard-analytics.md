@@ -4,9 +4,9 @@
 
 **Blocked by:** 09 — Payment status polling & voucher delivery, 03 — Router provisioning execution, fleet status & walled garden
 
-**Status:** ready-for-agent
+**Status:** closed
 
-- [ ] Dashboard shows today's revenue, active customers, active sessions, total customers, total vouchers, and online/offline router counts
-- [ ] Admin can see currently active sessions across all routers (username, router, plan, data used, IP/MAC where available) via `getActiveSessions`
-- [ ] Revenue breakdown by today/week/month and by plan/router
-- [ ] Plan-level sales analytics (units sold, revenue per plan)
+- [x] Dashboard shows today's revenue, active customers, active sessions, total customers, total vouchers, and online/offline router counts
+- [x] Admin can see currently active sessions across all routers (username, router, plan, data used, IP/MAC where available) via `getActiveSessions`
+- [x] Revenue breakdown by today/week/month and by plan/router
+- [x] Plan-level sales analytics (units sold, revenue per plan)
