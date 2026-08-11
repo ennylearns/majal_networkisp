@@ -5,13 +5,13 @@ interface Plan {
   name: string;
   price: number;
   data_limit_bytes: number | null;
-  duration_minutes: number;
+  duration_minutes: number | null;
   speed_down_kbps: number | null;
   speed_up_kbps: number | null;
 }
 
-const formatBytes = (bytes: number | null) => {
-  if (bytes === null) return 'Unlimited Data';
+const formatBytes = (bytes: number | null | undefined) => {
+  if (bytes == null) return 'Unlimited Data';
   if (bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -19,7 +19,8 @@ const formatBytes = (bytes: number | null) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const formatDuration = (minutes: number) => {
+const formatDuration = (minutes: number | null | undefined) => {
+  if (minutes == null) return 'No expiry';
   if (minutes < 60) return `${minutes} mins`;
   const hours = minutes / 60;
   if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''}`;
@@ -27,8 +28,8 @@ const formatDuration = (minutes: number) => {
   return `${days} day${days > 1 ? 's' : ''}`;
 };
 
-const formatSpeed = (kbps: number | null) => {
-  if (kbps === null) return 'Uncapped';
+const formatSpeed = (kbps: number | null | undefined) => {
+  if (kbps == null) return 'Uncapped';
   return kbps >= 1000 ? `${(kbps / 1000).toFixed(1)} Mbps` : `${kbps} kbps`;
 };
 

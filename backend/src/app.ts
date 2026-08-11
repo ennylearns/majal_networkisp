@@ -407,10 +407,35 @@ app.put('/api/plans/:id/disable', async (req: Request, res: Response) => {
   }
 });
 
+/** Parse MikroTik speed strings like "10M", "512k", "1G" to kbps integers. */
+function parseSpeedToKbps(speed: string | null | undefined): number | null {
+  if (speed == null || speed === '') return null;
+  const match = speed.trim().match(/^(\d+(?:\.\d+)?)\s*([kKmMgG]?)(?:bps)?$/);
+  if (!match) return null;
+  const value = parseFloat(match[1]!);
+  const unit = match[2]!.toLowerCase();
+  if (unit === 'g') return Math.round(value * 1_000_000);
+  if (unit === 'm') return Math.round(value * 1_000);
+  if (unit === 'k') return Math.round(value);
+  return Math.round(value / 1000); // assume bps → kbps
+}
+
+/** Map a raw DB plan row to the shape the captive portal frontend expects. */
+function normalizePlanForPortal(row: Record<string, any>) {
+  const { data_allowance, duration, download_speed, upload_speed, ...rest } = row;
+  return {
+    ...rest,
+    data_limit_bytes: data_allowance != null ? Number(data_allowance) : null,
+    duration_minutes: duration != null ? Number(duration) * 24 * 60 : null,
+    speed_down_kbps: parseSpeedToKbps(download_speed),
+    speed_up_kbps: parseSpeedToKbps(upload_speed),
+  };
+}
+
 app.get('/api/plans', async (req: Request, res: Response) => {
   try {
     const result = await pool.query('SELECT * FROM plans ORDER BY id ASC');
-    return res.json(result.rows);
+    return res.json(result.rows.map(normalizePlanForPortal));
   } catch (error) {
     return res.status(500).json({ error: 'Failed to fetch plans' });
   }
