@@ -177,6 +177,145 @@ app.get('/api/dashboard/stats', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/dashboard/summary', async (req: Request, res: Response) => {
+  try {
+    const todayRevenueResult = await pool.query(`
+      SELECT COALESCE(SUM(amount), 0) AS today_revenue
+      FROM transactions
+      WHERE status = 'successful' AND created_at >= CURRENT_DATE
+    `);
+    
+    const activeCustomersResult = await pool.query(`
+      SELECT COUNT(DISTINCT voucher_id) AS active_customers
+      FROM sessions
+      WHERE ended_at IS NULL
+    `);
+    
+    const activeSessionsResult = await pool.query(`
+      SELECT COUNT(*) AS active_sessions
+      FROM sessions
+      WHERE ended_at IS NULL
+    `);
+    
+    const totalCustomersResult = await pool.query(`
+      SELECT COUNT(*) AS total_customers FROM customers
+    `);
+    
+    const totalVouchersResult = await pool.query(`
+      SELECT COUNT(*) AS total_vouchers FROM vouchers
+    `);
+    
+    const routerCountsResult = await pool.query(`
+      SELECT 
+        COUNT(*) FILTER (WHERE status = 'online') as online_count,
+        COUNT(*) FILTER (WHERE status = 'offline') as offline_count
+      FROM routers
+    `);
+    
+    return res.json({
+      todayRevenue: parseFloat(todayRevenueResult.rows[0].today_revenue),
+      activeCustomers: parseInt(activeCustomersResult.rows[0].active_customers, 10),
+      activeSessions: parseInt(activeSessionsResult.rows[0].active_sessions, 10),
+      totalCustomers: parseInt(totalCustomersResult.rows[0].total_customers, 10),
+      totalVouchers: parseInt(totalVouchersResult.rows[0].total_vouchers, 10),
+      onlineRouters: parseInt(routerCountsResult.rows[0].online_count || '0', 10),
+      offlineRouters: parseInt(routerCountsResult.rows[0].offline_count || '0', 10),
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch dashboard summary' });
+  }
+});
+
+app.get('/api/dashboard/active-sessions', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        s.id,
+        s.username,
+        r.name as router_name,
+        p.name as plan_name,
+        s.data_used,
+        s.ip_address,
+        s.mac_address,
+        s.started_at
+      FROM sessions s
+      JOIN vouchers v ON s.voucher_id = v.id
+      LEFT JOIN routers r ON s.router_id = r.id
+      LEFT JOIN plans p ON v.plan_id = p.id
+      WHERE s.ended_at IS NULL
+      ORDER BY s.started_at DESC
+    `);
+    
+    const formatted = result.rows.map(row => ({
+      id: row.id,
+      username: row.username,
+      routerName: row.router_name,
+      planName: row.plan_name,
+      dataUsed: row.data_used,
+      ipAddress: row.ip_address,
+      macAddress: row.mac_address,
+      startedAt: row.started_at
+    }));
+    
+    return res.json(formatted);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch active sessions' });
+  }
+});
+
+app.get('/api/dashboard/analytics/revenue', async (req: Request, res: Response) => {
+  try {
+    const revenuePeriodsResult = await pool.query(`
+      SELECT 
+        COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE), 0) AS revenue_today,
+        COALESCE(SUM(amount) FILTER (WHERE created_at >= date_trunc('week', CURRENT_DATE)), 0) AS revenue_week,
+        COALESCE(SUM(amount) FILTER (WHERE created_at >= date_trunc('month', CURRENT_DATE)), 0) AS revenue_month
+      FROM transactions
+      WHERE status = 'successful'
+    `);
+    
+    const byPlanResult = await pool.query(`
+      SELECT 
+        p.name as plan_name,
+        COALESCE(SUM(t.amount), 0) as revenue,
+        COUNT(t.id) as units
+      FROM plans p
+      LEFT JOIN transactions t ON t.plan_id = p.id AND t.status = 'successful'
+      GROUP BY p.id, p.name
+      ORDER BY revenue DESC
+    `);
+    
+    const byRouterResult = await pool.query(`
+      SELECT 
+        r.name as router_name,
+        COALESCE(SUM(t.amount), 0) as revenue
+      FROM routers r
+      LEFT JOIN vouchers v ON v.router_id = r.id
+      LEFT JOIN transactions t ON v.transaction_id = t.id AND t.status = 'successful'
+      GROUP BY r.id, r.name
+      HAVING COALESCE(SUM(t.amount), 0) > 0
+      ORDER BY revenue DESC
+    `);
+    
+    return res.json({
+      today: parseFloat(revenuePeriodsResult.rows[0].revenue_today),
+      thisWeek: parseFloat(revenuePeriodsResult.rows[0].revenue_week),
+      thisMonth: parseFloat(revenuePeriodsResult.rows[0].revenue_month),
+      byPlan: byPlanResult.rows.map(row => ({
+        planName: row.plan_name,
+        revenue: parseFloat(row.revenue),
+        units: parseInt(row.units, 10)
+      })),
+      byRouter: byRouterResult.rows.map(row => ({
+        routerName: row.router_name,
+        revenue: parseFloat(row.revenue)
+      }))
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch revenue analytics' });
+  }
+});
+
 app.post('/api/plans', async (req: Request, res: Response) => {
   const { name, price, data_allowance, duration, download_speed, upload_speed } = req.body;
   
