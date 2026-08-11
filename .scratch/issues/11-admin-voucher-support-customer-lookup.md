@@ -4,9 +4,9 @@
 
 **Blocked by:** 07 — Voucher generation & MikroTik activation
 
-**Status:** ready-for-agent
+**Status:** closed
 
-- [ ] Admin can manually disable a voucher via `/api/vouchers`, moving it to the `disabled` lifecycle state
-- [ ] Disabling a voucher revokes/disables the corresponding MikroTik hotspot user via `MikroTikService.disableUser`
-- [ ] Admin can look up a customer's voucher history by phone number or email
-- [ ] Lookup results show voucher status, issuance date, and associated transaction/plan
+- [x] Admin can manually disable a voucher via `/api/vouchers`, moving it to the `disabled` lifecycle state
+- [x] Disabling a voucher revokes/disables the corresponding MikroTik hotspot user via `MikroTikService.disableUser`
+- [x] Admin can look up a customer's voucher history by phone number or email
+- [x] Lookup results show voucher status, issuance date, and associated transaction/plan
