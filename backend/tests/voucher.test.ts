@@ -104,6 +104,23 @@ describe('Voucher Generation and E2E Tests', () => {
         if (v) v.activation_status = values![0];
         return { rows: v ? [v] : [] };
       }
+      if (queryText.includes('SELECT * FROM vouchers WHERE id = $1')) {
+        const v = vouchers.find(v => v.id == values![0]);
+        return { rows: v ? [v] : [] };
+      }
+      if (queryText.includes('UPDATE vouchers SET status = $1 WHERE id = $2')) {
+        const v = vouchers.find(v => v.id == values![1]);
+        if (v) v.status = values![0];
+        return { rows: v ? [v] : [] };
+      }
+      if (queryText.includes('SELECT username FROM sessions WHERE voucher_id = $1 LIMIT 1')) {
+        return { rows: [{ username: 'MOCK_USER_CODE' }] };
+      }
+      if (queryText.includes('SELECT v.id, v.status, v.activation_status')) {
+        return { rows: vouchers.filter(v => 
+          (!values![0] || v.phone_number === values![0])
+        ) };
+      }
 
       return { rows: [] };
     });
@@ -201,5 +218,44 @@ describe('Voucher Generation and E2E Tests', () => {
     expect(voucher.activation_status).toBe('FAILED');
     
     vi.useRealTimers();
+  });
+
+  it('Admin can disable a voucher', async () => {
+    vouchers.push({
+      id: 99,
+      code_hash: 'somehash',
+      plan_id: 1,
+      transaction_id: 1,
+      phone_number: '123',
+      email: 'a@b.com',
+      status: 'unused',
+      activation_status: 'ACTIVATED',
+      router_id: 1
+    });
+
+    const disableRouterSpy = vi.spyOn(fakeMikroTikService, 'disableUser');
+
+    const res = await request(app).put('/api/vouchers/99/disable');
+    if (res.status !== 200) {
+       console.log('DISABLE TEST FAILED:', res.status, res.text);
+    }
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.voucher.status).toBe('disabled');
+    
+    expect(disableRouterSpy).toHaveBeenCalledWith(1, 'MOCK_USER_CODE');
+  });
+
+  it('Admin can lookup a customer voucher history', async () => {
+    vouchers.push({
+      id: 100,
+      code_hash: 'hash100',
+      phone_number: '999888777'
+    });
+
+    const res = await request(app).get('/api/vouchers?phone_number=999888777');
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBeGreaterThan(0);
+    expect(res.body[0].id).toBe(100);
   });
 });

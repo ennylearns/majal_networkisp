@@ -618,4 +618,82 @@ app.get('/api/sessions', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/vouchers', async (req: Request, res: Response) => {
+  const { phone_number, email } = req.query;
+  try {
+    let query = `
+      SELECT v.id, v.status, v.activation_status, v.issued_at, v.phone_number, v.email, 
+             t.amount, t.paystack_reference, p.name as plan_name
+      FROM vouchers v
+      LEFT JOIN transactions t ON v.transaction_id = t.id
+      LEFT JOIN plans p ON v.plan_id = p.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    if (phone_number) {
+      params.push(phone_number as string);
+      query += ` AND v.phone_number = $${params.length}`;
+    }
+    if (email) {
+      params.push(email as string);
+      query += ` AND v.email = $${params.length}`;
+    }
+    
+    query += ` ORDER BY v.issued_at DESC`;
+    
+    const result = await pool.query(query, params);
+    return res.json(result.rows);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to lookup vouchers' });
+  }
+});
+
+app.put('/api/vouchers/:id/disable', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { code } = req.body || {};
+  
+  try {
+    const voucherResult = await pool.query('SELECT * FROM vouchers WHERE id = $1', [id]);
+    if (voucherResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Voucher not found' });
+    }
+    const voucher = voucherResult.rows[0];
+
+    if (voucher.status === 'disabled') {
+      return res.json({ success: true, voucher });
+    }
+
+    let usernameToDisable = null;
+
+    if (code) {
+      const hash = voucherService.hashVoucher(code);
+      if (hash === voucher.code_hash) {
+        usernameToDisable = code;
+      }
+    }
+
+    if (!usernameToDisable) {
+      const sessionResult = await pool.query('SELECT username FROM sessions WHERE voucher_id = $1 LIMIT 1', [id]);
+      if (sessionResult.rows.length > 0) {
+        usernameToDisable = sessionResult.rows[0].username;
+      }
+    }
+
+    if (usernameToDisable && voucher.router_id) {
+      try {
+        await mikroTikService.disableUser(voucher.router_id, usernameToDisable);
+      } catch (err) {
+        console.error('Failed to disable user on MikroTik:', err);
+      }
+    }
+
+    const updateResult = await pool.query('UPDATE vouchers SET status = $1 WHERE id = $2 RETURNING *', ['disabled', id]);
+    
+    return res.json({ success: true, voucher: updateResult.rows[0] });
+  } catch (error: any) {
+    console.error('DISABLE ERROR:', error);
+    return res.status(500).json({ error: 'Failed to disable voucher: ' + error.message, stack: error.stack });
+  }
+});
+
 export { app, mikroTikService, paymentService };
