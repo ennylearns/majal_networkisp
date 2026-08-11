@@ -109,3 +109,13 @@ CREATE TABLE portal_settings (
     visible_plan_ids INTEGER[],
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE audit_logs (
+    id SERIAL PRIMARY KEY,
+    admin_id INTEGER REFERENCES admins(id),
+    action_type VARCHAR(100) NOT NULL, -- e.g., 'PLAN_CREATED', 'PLAN_UPDATED', 'VOUCHER_DISABLED', 'ROUTER_PROVISIONED', 'PAYMENT_RECEIVED', 'ROUTER_STATUS_CHANGED'
+    target_entity VARCHAR(100) NOT NULL, -- e.g., 'plan', 'voucher', 'router', 'payment'
+    target_entity_id INTEGER,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

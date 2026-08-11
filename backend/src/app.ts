@@ -7,8 +7,23 @@ import { pool } from './db';
 import { ProvisioningService } from './services/ProvisioningService';
 import { generateRscScript } from './services/RscGenerator';
 import { voucherService } from './services/VoucherService';
+import { AuditService } from './services/AuditService';
 
 const provisioningService = new ProvisioningService();
+const auditService = new AuditService(pool);
+
+function getAdminId(req: Request): number | null {
+  const authHeader = req.headers.authorization as string | undefined;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  try {
+    const token = authHeader.split(' ')[1];
+    if (!token) return null;
+    const payload = jwt.verify(token, 'secret-key') as any;
+    return payload.id || null;
+  } catch (e) {
+    return null;
+  }
+}
 
 const app = express();
 app.use(express.json());
@@ -68,6 +83,8 @@ app.post('/api/routers', async (req: Request, res: Response) => {
     const url = `${protocol}://${domain}/provision/${token}`;
     const command = `/tool fetch url="${url}" mode=https dst-path=provision.rsc; /import file-name=provision.rsc`;
 
+    await auditService.logAction(getAdminId(req), 'ROUTER_PROVISIONING_STARTED', 'router', routerId, { token });
+
     return res.status(201).json({ id: routerId, token, command });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to register router' });
@@ -119,6 +136,9 @@ app.post('/api/provision-report', async (req: Request, res: Response) => {
   if (!token) return res.status(400).json({ error: 'Token required' });
   
   try {
+    const tokenResult = await pool.query('SELECT router_id FROM router_provisioning_tokens WHERE token = $1', [token]);
+    const routerId = tokenResult.rows[0]?.router_id;
+
     // We already marked it used when it was fetched, but we can update the result.
     // A proper implementation might wait until this report to mark it used.
     // For now we just update the provisioning_result.
@@ -133,14 +153,18 @@ app.post('/api/provision-report', async (req: Request, res: Response) => {
       await pool.query(`
         UPDATE routers 
         SET status = 'online', last_seen_at = CURRENT_TIMESTAMP 
-        WHERE id = (SELECT router_id FROM router_provisioning_tokens WHERE token = $1)
-      `, [token]);
+        WHERE id = $1
+      `, [routerId]);
+      await auditService.logAction(null, 'ROUTER_PROVISIONED', 'router', routerId, { status: 'success', message });
+      await auditService.logAction(null, 'ROUTER_STATUS_CHANGED', 'router', routerId, { status: 'online' });
     } else {
       await pool.query(`
         UPDATE routers 
         SET status = 'error', last_seen_at = CURRENT_TIMESTAMP 
-        WHERE id = (SELECT router_id FROM router_provisioning_tokens WHERE token = $1)
-      `, [token]);
+        WHERE id = $1
+      `, [routerId]);
+      await auditService.logAction(null, 'ROUTER_PROVISIONING_FAILED', 'router', routerId, { status: 'error', message });
+      await auditService.logAction(null, 'ROUTER_STATUS_CHANGED', 'router', routerId, { status: 'error' });
     }
     return res.json({ success: true });
   } catch (error) {
@@ -347,6 +371,8 @@ app.post('/api/plans', async (req: Request, res: Response) => {
       }
     }
 
+    await auditService.logAction(getAdminId(req), 'PLAN_CREATED', 'plan', plan.id, { name, price });
+
     return res.status(201).json({ plan });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to create plan' });
@@ -360,6 +386,7 @@ app.put('/api/plans/:id/enable', async (req: Request, res: Response) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Plan not found' });
     }
+    await auditService.logAction(getAdminId(req), 'PLAN_ENABLED', 'plan', parseInt(id as string, 10));
     return res.json({ plan: result.rows[0] });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to enable plan' });
@@ -373,6 +400,7 @@ app.put('/api/plans/:id/disable', async (req: Request, res: Response) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Plan not found' });
     }
+    await auditService.logAction(getAdminId(req), 'PLAN_DISABLED', 'plan', parseInt(id as string, 10));
     return res.json({ plan: result.rows[0] });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to disable plan' });
@@ -439,11 +467,16 @@ app.post('/api/webhooks/paystack', async (req: Request, res: Response) => {
   if (payload.event === 'charge.success') {
     const { reference } = payload.data;
     try {
-      await pool.query(`
+      const resQuery = await pool.query(`
         UPDATE transactions 
         SET status = 'successful', webhook_received_at = CURRENT_TIMESTAMP
         WHERE paystack_reference = $1 AND status = 'pending'
+        RETURNING id
       `, [reference]);
+      
+      if (resQuery.rows.length > 0) {
+        await auditService.logAction(null, 'PAYMENT_RECEIVED', 'transaction', resQuery.rows[0].id, { reference });
+      }
     } catch (error) {
       return res.status(500).json({ error: 'Failed to process webhook' });
     }
@@ -689,6 +722,8 @@ app.put('/api/vouchers/:id/disable', async (req: Request, res: Response) => {
 
     const updateResult = await pool.query('UPDATE vouchers SET status = $1 WHERE id = $2 RETURNING *', ['disabled', id]);
     
+    await auditService.logAction(getAdminId(req), 'VOUCHER_DISABLED', 'voucher', parseInt(id as string, 10));
+
     return res.json({ success: true, voucher: updateResult.rows[0] });
   } catch (error: any) {
     console.error('DISABLE ERROR:', error);
@@ -696,4 +731,19 @@ app.put('/api/vouchers/:id/disable', async (req: Request, res: Response) => {
   }
 });
 
-export { app, mikroTikService, paymentService };
+app.get('/api/audit-logs', async (req: Request, res: Response) => {
+  try {
+    const filters: { actionType?: string; targetEntity?: string; adminId?: number; limit?: number; offset?: number } = {};
+    if (req.query.actionType) filters.actionType = req.query.actionType as string;
+    if (req.query.targetEntity) filters.targetEntity = req.query.targetEntity as string;
+    if (req.query.adminId) filters.adminId = parseInt(req.query.adminId as string, 10);
+    if (req.query.limit) filters.limit = parseInt(req.query.limit as string, 10);
+    if (req.query.offset) filters.offset = parseInt(req.query.offset as string, 10);
+    const logs = await auditService.getLogs(filters);
+    return res.json(logs);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch audit logs' });
+  }
+});
+
+export { app, mikroTikService, paymentService, auditService };
