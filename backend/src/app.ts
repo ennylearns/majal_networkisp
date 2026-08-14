@@ -99,9 +99,13 @@ app.post('/api/routers', requireAdmin, async (req: Request, res: Response) => {
 });
 
 app.post('/api/routers/:id/revoke-token', requireAdmin, async (req: Request, res: Response) => {
-  const { token } = req.body;
+  const { id } = req.params;
   try {
-    await provisioningService.revokeToken(token);
+    const result = await pool.query('SELECT token FROM router_provisioning_tokens WHERE router_id = $1 AND revoked_at IS NULL AND used_at IS NULL', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No active token found for this router' });
+    }
+    await provisioningService.revokeToken(result.rows[0].token);
     return res.json({ success: true });
   } catch (error) {
     return res.status(400).json({ error: (error as Error).message });

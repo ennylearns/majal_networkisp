@@ -19,6 +19,16 @@ interface AuditLog {
   created_at: string;
 }
 
+interface Router {
+  id: number;
+  name: string;
+  location: string;
+  status: string;
+  routeros_version: string;
+  architecture: string;
+  last_seen_at: string;
+}
+
 // Global state for auth token
 let authToken = localStorage.getItem('majal_admin_token');
 
@@ -36,6 +46,19 @@ const metricTotalRouters = document.getElementById('metric-total-routers');
 const metricTotalCustomers = document.getElementById('metric-total-customers');
 
 const auditLogsTableBody = document.getElementById('audit-logs-table-body');
+
+// View Elements
+const viewSections = document.querySelectorAll('.view-section');
+const navLinks = document.querySelectorAll('.nav-link');
+
+// Router View Elements
+const routersTableBody = document.getElementById('routers-table-body');
+const btnAddRouter = document.getElementById('btn-add-router');
+const modalAddRouter = document.getElementById('modal-add-router');
+const btnCloseAddRouter = document.getElementById('btn-close-add-router');
+const btnCancelAddRouter = document.getElementById('btn-cancel-add-router');
+const addRouterForm = document.getElementById('add-router-form') as HTMLFormElement;
+const addRouterError = document.getElementById('add-router-error');
 
 // Initialize
 function init() {
@@ -188,6 +211,170 @@ function escapeHtml(unsafe: string) {
          .replace(/"/g, "&quot;")
          .replace(/'/g, "&#039;");
 }
+
+// Navigation
+navLinks.forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = (link as HTMLElement).dataset.target;
+    if (target) switchView(target);
+  });
+});
+
+function switchView(targetView: string) {
+  // Update nav links styles
+  navLinks.forEach(link => {
+    const isTarget = (link as HTMLElement).dataset.target === targetView;
+    if (isTarget) {
+      link.className = 'nav-link bg-primary text-on-primary rounded-xl flex items-center gap-3 px-4 py-3 mx-2 scale-98 transition-all duration-200';
+    } else {
+      link.className = 'nav-link text-surface-variant flex items-center gap-3 px-4 py-3 mx-2 hover:bg-primary-fixed-dim/10 transition-colors rounded-xl';
+    }
+  });
+
+  // Show/Hide sections
+  viewSections.forEach(section => {
+    if (section.id === `view-${targetView}`) {
+      section.classList.remove('hidden');
+    } else {
+      section.classList.add('hidden');
+    }
+  });
+
+  // Load specific view data
+  if (targetView === 'routers') {
+    loadRoutersData();
+  } else if (targetView === 'dashboard') {
+    loadDashboardData();
+  }
+}
+
+// Load Routers Data
+async function loadRoutersData() {
+  if (!routersTableBody) return;
+  routersTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-secondary">Loading...</td></tr>`;
+  
+  try {
+    const res = await fetch('/api/routers', {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed to load routers');
+    
+    const routers: Router[] = await res.json();
+    renderRoutersTable(routers);
+  } catch (error) {
+    console.error(error);
+    routersTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-error">Failed to load routers</td></tr>`;
+  }
+}
+
+function renderRoutersTable(routers: Router[]) {
+  if (!routersTableBody) return;
+  
+  if (routers.length === 0) {
+    routersTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-secondary">No routers found</td></tr>`;
+    return;
+  }
+  
+  routersTableBody.innerHTML = routers.map(router => {
+    const statusColor = router.status === 'online' ? 'text-[#059669]' : router.status === 'offline' ? 'text-error' : 'text-primary';
+    
+    return `
+      <tr class="hover:bg-surface-container/50 transition-colors">
+          <td class="px-6 py-4 text-on-background font-medium">${escapeHtml(router.name)}</td>
+          <td class="px-6 py-4 text-secondary">${escapeHtml(router.location || '-')}</td>
+          <td class="px-6 py-4">
+              <span class="font-label-sm text-label-sm ${statusColor} capitalize">${escapeHtml(router.status)}</span>
+          </td>
+          <td class="px-6 py-4">
+              <button class="text-error hover:text-error/80 font-label-sm text-label-sm transition-colors" onclick="revokeRouterToken(${router.id})">Revoke Token</button>
+          </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Expose revoke function globally
+(window as any).revokeRouterToken = async (id: number) => {
+  if (!confirm('Are you sure you want to revoke the provisioning token for this router?')) return;
+  
+  try {
+    const res = await fetch(`/api/routers/${id}/revoke-token`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Failed to revoke token');
+    }
+    
+    alert('Token revoked successfully');
+    loadRoutersData();
+  } catch (error: any) {
+    alert(error.message);
+  }
+};
+
+// Add Router Logic
+function showAddRouterModal() {
+  if (modalAddRouter) modalAddRouter.classList.remove('hidden');
+  if (addRouterError) addRouterError.classList.add('hidden');
+  addRouterForm?.reset();
+}
+
+function hideAddRouterModal() {
+  if (modalAddRouter) modalAddRouter.classList.add('hidden');
+}
+
+btnAddRouter?.addEventListener('click', showAddRouterModal);
+btnCloseAddRouter?.addEventListener('click', hideAddRouterModal);
+btnCancelAddRouter?.addEventListener('click', hideAddRouterModal);
+
+addRouterForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const name = (document.getElementById('router-name') as HTMLInputElement).value;
+  const location = (document.getElementById('router-location') as HTMLInputElement).value;
+  const spinner = document.getElementById('add-router-spinner');
+  
+  if (spinner) spinner.classList.remove('hidden');
+  if (addRouterError) addRouterError.classList.add('hidden');
+  
+  try {
+    const res = await fetch('/api/routers', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ name, location })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to add router');
+    }
+    
+    hideAddRouterModal();
+    loadRoutersData();
+    
+    // Show the provisioning command in an alert
+    if (data.command) {
+      alert(`Router added successfully.\n\nRun this command in the router terminal to provision:\n${data.command}`);
+    }
+    
+  } catch (error: any) {
+    if (addRouterError) {
+      addRouterError.textContent = error.message;
+      addRouterError.classList.remove('hidden');
+    }
+  } finally {
+    if (spinner) spinner.classList.add('hidden');
+  }
+});
 
 // Start
 init();

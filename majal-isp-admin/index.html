@@ -142,11 +142,11 @@
             <span class="font-label-sm text-label-sm text-surface-variant">Admin Console</span>
         </div>
         <div class="flex-1 flex flex-col gap-2 px-2 overflow-y-auto">
-            <a class="bg-primary text-on-primary rounded-xl flex items-center gap-3 px-4 py-3 mx-2 scale-98 transition-all duration-200" href="#">
+            <a class="nav-link bg-primary text-on-primary rounded-xl flex items-center gap-3 px-4 py-3 mx-2 scale-98 transition-all duration-200" href="#" data-target="dashboard">
                 <span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
                 <span class="font-label-sm text-label-sm">Dashboard</span>
             </a>
-            <a class="text-surface-variant flex items-center gap-3 px-4 py-3 mx-2 hover:bg-primary-fixed-dim/10 transition-colors rounded-xl" href="#">
+            <a class="nav-link text-surface-variant flex items-center gap-3 px-4 py-3 mx-2 hover:bg-primary-fixed-dim/10 transition-colors rounded-xl" href="#" data-target="routers">
                 <span class="material-symbols-outlined" data-icon="router">router</span>
                 <span class="font-label-sm text-label-sm">Routers</span>
             </a>
@@ -207,8 +207,10 @@
         </header>
 
         <!-- Canvas -->
-        <main class="flex-1 overflow-y-auto pt-24 px-margin-mobile md:px-margin-desktop pb-margin-desktop">
-            <div class="max-w-container-max mx-auto space-y-8">
+        <main class="flex-1 overflow-y-auto pt-24 px-margin-mobile md:px-margin-desktop pb-margin-desktop relative">
+            
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="max-w-container-max mx-auto space-y-8 view-section">
                 <div class="flex justify-between items-end">
                     <div>
                         <h1 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background">Dashboard Overview</h1>
@@ -303,7 +305,72 @@
                     </div>
                 </div>
             </div>
+            <!-- Routers View -->
+            <div id="view-routers" class="max-w-container-max mx-auto space-y-8 view-section hidden">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h1 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background">Routers</h1>
+                        <p class="font-body-md text-body-md text-secondary mt-1">Manage network routers and provisioning.</p>
+                    </div>
+                    <button id="btn-add-router" class="bg-primary text-on-primary px-6 py-2.5 rounded-xl font-label-sm text-label-sm flex items-center gap-2 hover:opacity-90 transition-opacity">
+                        <span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        Add Router
+                    </button>
+                </div>
+
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-surface-container-low border-b border-outline-variant">
+                                    <th class="px-6 py-3 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Location</th>
+                                    <th class="px-6 py-3 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="routers-table-body" class="divide-y divide-outline-variant font-body-md text-body-md">
+                                <tr>
+                                    <td colspan="4" class="px-6 py-8 text-center text-secondary">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </main>
+    </div>
+
+    <!-- Add Router Modal -->
+    <div id="modal-add-router" class="fixed inset-0 z-50 bg-on-background/50 hidden flex items-center justify-center">
+        <div class="bg-surface-container-lowest border border-outline-variant p-8 rounded-xl shadow-lg w-full max-w-md flex flex-col gap-6">
+            <div class="flex justify-between items-center">
+                <h2 class="font-headline-md text-headline-md text-on-background">Add Router</h2>
+                <button id="btn-close-add-router" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-full hover:bg-surface-variant">
+                    <span class="material-symbols-outlined" data-icon="close">close</span>
+                </button>
+            </div>
+            
+            <div id="add-router-error" class="hidden bg-error-container text-on-error-container p-3 rounded-lg text-sm"></div>
+            
+            <form id="add-router-form" class="flex flex-col gap-4">
+                <div>
+                    <label class="block font-label-sm text-label-sm text-on-surface mb-1" for="router-name">Name</label>
+                    <input type="text" id="router-name" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required placeholder="e.g. Core-Router-01">
+                </div>
+                <div>
+                    <label class="block font-label-sm text-label-sm text-on-surface mb-1" for="router-location">Location</label>
+                    <input type="text" id="router-location" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required placeholder="e.g. Server Room A">
+                </div>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button type="button" id="btn-cancel-add-router" class="px-4 py-2 text-on-surface-variant hover:bg-surface-variant rounded-lg font-label-sm text-label-sm transition-colors">Cancel</button>
+                    <button type="submit" class="bg-primary text-on-primary px-6 py-2 rounded-lg font-label-sm text-label-sm hover:opacity-90 transition-opacity flex items-center gap-2">
+                        <span id="add-router-spinner" class="material-symbols-outlined hidden animate-spin">progress_activity</span>
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>
