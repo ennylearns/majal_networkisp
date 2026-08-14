@@ -1,0 +1,208 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>MAJAL ISP - Connect</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#0b1c30",
+                        "secondary-container": "#d4e4fb",
+                        "primary": "#0040a1",
+                        "on-surface-variant": "#424654",
+                        "tertiary": "#43474b",
+                        "on-tertiary-fixed": "#171c1f",
+                        "primary-fixed": "#dae2ff",
+                        "tertiary-container": "#5a5f62",
+                        "on-tertiary-fixed-variant": "#43474b",
+                        "secondary-fixed": "#d4e4fb",
+                        "primary-container": "#0056d2",
+                        "surface-container-high": "#dce9ff",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#b8c8de",
+                        "surface": "#f8f9ff",
+                        "on-primary": "#ffffff",
+                        "outline": "#737785",
+                        "on-secondary-container": "#576679",
+                        "tertiary-fixed": "#dfe3e7",
+                        "on-secondary-fixed": "#0d1c2d",
+                        "on-primary-container": "#ccd8ff",
+                        "secondary": "#516073",
+                        "on-tertiary-container": "#d5d9dd",
+                        "surface-tint": "#0056d2",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#39485a",
+                        "background": "#f8f9ff",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#d3e4fe",
+                        "surface-container": "#e5eeff",
+                        "surface-bright": "#f8f9ff",
+                        "on-primary-fixed": "#001847",
+                        "surface-dim": "#cbdbf5",
+                        "tertiary-fixed-dim": "#c3c7cb",
+                        "on-error-container": "#93000a",
+                        "on-error": "#ffffff",
+                        "inverse-on-surface": "#eaf1ff",
+                        "outline-variant": "#c3c6d6",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#b2c5ff",
+                        "inverse-surface": "#213145",
+                        "surface-container-highest": "#d3e4fe",
+                        "primary-fixed-dim": "#b2c5ff",
+                        "on-surface": "#0b1c30",
+                        "surface-container-low": "#eff4ff",
+                        "on-primary-fixed-variant": "#0040a1",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-mobile": "20px",
+                        "base": "8px",
+                        "margin-desktop": "64px",
+                        "container-max": "1200px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "headline-xl": ["Hanken Grotesk"],
+                        "headline-lg-mobile": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col items-center">
+<!-- Header / Top App Bar -->
+<header class="w-full fixed top-0 left-0 z-50 flex items-center justify-center h-16 px-margin-mobile bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-2 text-primary font-headline-md text-headline-md font-bold">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">signal_wifi_4_bar</span>
+<span class="">MAJAL ISP</span>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="w-full max-w-container-max px-margin-mobile pt-24 pb-32 flex flex-col items-center gap-8 md:px-margin-desktop md:py-32">
+<!-- Logo & Hero -->
+<div class="text-center w-full flex flex-col items-center">
+<img alt="MAJAL ISP Logo" class="w-32 h-32 mb-6 rounded-full border border-outline-variant object-contain p-2 bg-surface-container-lowest" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDG6zoiSBrRWm_Xt1DT01j13IewzCb69Js9J4-yhusFKBdOYn3E8kNbxPypYzd7xSQQc2d4dGU5HJvQft6-T2dGhvtNbw9aQDMdAjao4aMoIqTVJGoSSbqGHqHzuJWbZvI0TjIRieT34ss1aKP8ROnsA8ID8lg1_ZJM5tKlgstv-r5wqe-E__EepIa4QfAKmpWxYmPY3xklfnUEfgJFCWUkJEdi0q5e3b9VjkXSCNr-nhsvSEbLsUbqD8pmrVWMWf0ZK6A">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-background mb-2">Welcome to MAJAL ISP WiFi</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Enter your voucher or select a plan to connect.</p>
+</div>
+<!-- Voucher Login Card -->
+<div class="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-6">
+<div>
+<h2 class="font-headline-md text-headline-md text-secondary mb-1">Voucher Login</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Already have a code? Enter it below.</p>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase" for="voucher">Voucher Code</label>
+<input class="w-full h-12 px-4 border border-outline rounded focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface transition-all font-body-md text-body-md" id="voucher" placeholder="Enter your code" type="text">
+</div>
+<button class="w-full h-12 bg-primary text-on-primary font-body-md text-body-md font-semibold rounded flex items-center justify-center gap-2 hover:bg-primary-container transition-colors active:scale-95">
+<span class="material-symbols-outlined">login</span>
+                    Connect
+                </button>
+</div>
+</div>
+<!-- Divider -->
+<div class="w-full max-w-md flex items-center gap-4 py-4">
+<div class="h-px bg-outline-variant flex-1"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Or Select a Plan</span>
+<div class="h-px bg-outline-variant flex-1"></div>
+</div>
+<!-- Plans Section -->
+<div class="w-full max-w-md flex flex-col gap-4">
+<!-- Plan: Lite -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4 hover:border-primary/50 hover:bg-[#F8FAFC] transition-colors relative group">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-md text-headline-md text-secondary">Lite</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">1GB / 1 Day</p>
+</div>
+<div class="text-right">
+<span class="font-headline-md text-headline-md text-primary font-bold">500 NGN</span>
+</div>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">speed</span>
+                    High Speed 4G/5G
+                </div>
+<button class="w-full h-12 bg-surface text-primary border border-primary font-body-md text-body-md font-semibold rounded hover:bg-primary hover:text-on-primary transition-colors active:scale-95 mt-2">
+                    Buy with Paystack
+                </button>
+</div>
+<!-- Plan: Standard -->
+<div class="bg-surface-container-lowest border border-primary rounded-xl p-6 flex flex-col gap-4 relative shadow-[0_0_0_1px_rgba(0,64,161,0.2)] group overflow-hidden">
+<div class="absolute top-0 right-0 bg-primary text-on-primary font-label-sm text-label-sm px-3 py-1 rounded-bl-lg font-bold">POPULAR</div>
+<div class="flex justify-between items-start mt-2">
+<div>
+<h3 class="font-headline-md text-headline-md text-primary font-bold">Standard</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">5GB / 7 Days</p>
+</div>
+<div class="text-right">
+<span class="font-headline-md text-headline-md text-primary font-bold">2,000 NGN</span>
+</div>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">speed</span>
+                    High Speed 4G/5G
+                </div>
+<button class="w-full h-12 bg-primary text-on-primary font-body-md text-body-md font-semibold rounded hover:bg-primary-container transition-colors active:scale-95 mt-2">
+                    Buy with Paystack
+                </button>
+</div>
+<!-- Plan: Unlimited -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col gap-4 hover:border-primary/50 hover:bg-[#F8FAFC] transition-colors relative group">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-md text-headline-md text-secondary">Unlimited</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">30 Days</p>
+</div>
+<div class="text-right">
+<span class="font-headline-md text-headline-md text-primary font-bold">10,000 NGN</span>
+</div>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">speed</span>
+                    High Speed 4G/5G (Fair Use Applies)
+                </div>
+<button class="w-full h-12 bg-surface text-primary border border-primary font-body-md text-body-md font-semibold rounded hover:bg-primary hover:text-on-primary transition-colors active:scale-95 mt-2">
+                    Buy with Paystack
+                </button>
+</div>
+</div>
+</main>
+<!-- Note: Bottom navigation is suppressed as this is a linear transactional/login page -->
+
+
+</body></html>
