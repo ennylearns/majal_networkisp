@@ -14,3 +14,6 @@ The `getAdminId` helper already verifies the JWT and returns the admin's id or `
 - [ ] Public routes (`GET /api/plans`, checkout, webhook, sessions, provisioning) are unaffected and require no token
 - [ ] The audit log for any admin action records the correct admin id (not `null`)
 - [ ] New or updated integration tests cover the 401 path for at least two protected routes
+
+f9a78CbDrQg40Udx
+f9a78CbDrQg40Udx

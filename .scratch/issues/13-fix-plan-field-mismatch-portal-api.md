@@ -8,11 +8,11 @@ The resolution is to align one side to the other — either rename the frontend 
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Plan cards on the captive portal show the correct data allowance for each plan (not `NaN`)
-- [ ] Plan cards show the correct duration (not `NaN`)
-- [ ] Plan cards show the correct download/upload speed (not `NaN`)
-- [ ] `formatBytes`, `formatDuration`, and `formatSpeed` handle `undefined` and `null` gracefully (no silent `NaN` output)
-- [ ] A plan with no data cap displays "Unlimited Data", a plan with no speed cap displays "Uncapped"
-- [ ] The fix is covered by at least one integration test or snapshot test verifying the rendered card against a real API response shape
+- [x] Plan cards on the captive portal show the correct data allowance for each plan (not `NaN`)
+- [x] Plan cards show the correct duration (not `NaN`)
+- [x] Plan cards show the correct download/upload speed (not `NaN`)
+- [x] `formatBytes`, `formatDuration`, and `formatSpeed` handle `undefined` and `null` gracefully (no silent `NaN` output)
+- [x] A plan with no data cap displays "Unlimited Data", a plan with no speed cap displays "Uncapped"
+- [x] The fix is covered by at least one integration test or snapshot test verifying the rendered card against a real API response shape
