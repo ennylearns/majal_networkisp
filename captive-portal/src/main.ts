@@ -34,13 +34,7 @@ const formatSpeed = (kbps: number | null | undefined) => {
 };
 
 const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
-};
-
-const Icons = {
-  data: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>`,
-  time: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
-  speed: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5l-5-3-5 3M17 19l-5 3-5-3"></path></svg>`
+  return new Intl.NumberFormat('en-US').format(price) + ' NGN';
 };
 
 const renderApp = async () => {
@@ -51,25 +45,26 @@ const renderApp = async () => {
 
   if (sessionToken && !reference) {
     app.innerHTML = `
-      <div class="portal-container">
-        <div class="header">
-          <div class="header-logo">M</div>
+      <main>
+        <div class="hero-section">
+          <img alt="MAJAL ISP Logo" class="hero-logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDG6zoiSBrRWm_Xt1DT01j13IewzCb69Js9J4-yhusFKBdOYn3E8kNbxPypYzd7xSQQc2d4dGU5HJvQft6-T2dGhvtNbw9aQDMdAjao4aMoIqTVJGoSSbqGHqHzuJWbZvI0TjIRieT34ss1aKP8ROnsA8ID8lg1_ZJM5tKlgstv-r5wqe-E__EepIa4QfAKmpWxYmPY3xklfnUEfgJFCWUkJEdi0q5e3b9VjkXSCNr-nhsvSEbLsUbqD8pmrVWMWf0ZK6A">
+          <h1 class="hero-title">Session Status</h1>
+          <p class="hero-subtitle">You are connected to the network.</p>
           <div class="status-badge" id="session-badge">
             <div class="status-dot"></div>
             Loading Session...
           </div>
-          <h1>Session Status</h1>
         </div>
         
-        <div id="session-details" class="plans-grid">
+        <div id="session-details" class="card">
           <div class="loading">
             <div class="spinner"></div>
             <p>Fetching your session...</p>
           </div>
         </div>
         
-        <button class="pay-btn" onclick="logout()" style="background: rgba(239, 68, 68, 0.1); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.2); margin-top: 2rem;">Logout / Disconnect</button>
-      </div>
+        <button class="btn-outline" onclick="logout()" style="color: var(--error); border-color: var(--error); max-width: 448px;">Logout / Disconnect</button>
+      </main>
     `;
 
     (window as any).logout = () => {
@@ -88,25 +83,26 @@ const renderApp = async () => {
       const badge = document.getElementById('session-badge')!;
       badge.innerHTML = `<div class="status-dot"></div> ${data.voucherStatus.toUpperCase()}`;
       if (data.voucherStatus !== 'active') {
-        badge.style.color = '#F87171';
-        badge.style.background = 'rgba(239, 68, 68, 0.1)';
+        badge.style.color = 'var(--error)';
+        badge.style.background = 'var(--error-bg)';
       }
 
       document.getElementById('session-details')!.innerHTML = `
-        <div class="plan-card">
-          <div class="plan-features" style="grid-template-columns: 1fr; gap: 1rem;">
-            <div class="feature" style="justify-content: space-between; font-size: 1rem;">
-              <span style="color: #fff">Data Used:</span>
-              <span>${formatBytes(data.dataUsed)} / ${formatBytes(data.dataAllowance)}</span>
-            </div>
-            <div class="feature" style="justify-content: space-between; font-size: 1rem;">
-              <span style="color: #fff">Started At:</span>
-              <span>${new Date(data.startedAt).toLocaleString()}</span>
-            </div>
-            <div class="feature" style="justify-content: space-between; font-size: 1rem;">
-              <span style="color: #fff">IP Address:</span>
-              <span>${data.ipAddress || 'Unknown'}</span>
-            </div>
+        <div>
+          <h2 class="card-title">Session Details</h2>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; justify-content: space-between; font-size: 16px;">
+            <span style="color: var(--text-muted)">Data Used:</span>
+            <span style="font-weight: 600;">${formatBytes(data.dataUsed)} / ${formatBytes(data.dataAllowance)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 16px;">
+            <span style="color: var(--text-muted)">Started At:</span>
+            <span style="font-weight: 600;">${new Date(data.startedAt).toLocaleString()}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 16px;">
+            <span style="color: var(--text-muted)">IP Address:</span>
+            <span style="font-weight: 600; font-family: var(--font-mono);">${data.ipAddress || 'Unknown'}</span>
           </div>
         </div>
       `;
@@ -118,74 +114,73 @@ const renderApp = async () => {
   }
   
   app.innerHTML = `
-    <div class="portal-container">
-      <div class="header">
-        <div class="header-logo">M</div>
-        <div class="status-badge">
-          <div class="status-dot"></div>
-          Connected to MAJAL
-        </div>
-        <h1>Welcome to MAJAL Network</h1>
-        <p>You have successfully connected. Please select a plan to access the internet.</p>
+    <main>
+      <div class="hero-section">
+        <img alt="MAJAL ISP Logo" class="hero-logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDG6zoiSBrRWm_Xt1DT01j13IewzCb69Js9J4-yhusFKBdOYn3E8kNbxPypYzd7xSQQc2d4dGU5HJvQft6-T2dGhvtNbw9aQDMdAjao4aMoIqTVJGoSSbqGHqHzuJWbZvI0TjIRieT34ss1aKP8ROnsA8ID8lg1_ZJM5tKlgstv-r5wqe-E__EepIa4QfAKmpWxYmPY3xklfnUEfgJFCWUkJEdi0q5e3b9VjkXSCNr-nhsvSEbLsUbqD8pmrVWMWf0ZK6A">
+        <h1 class="hero-title">Welcome to MAJAL ISP WiFi</h1>
+        <p class="hero-subtitle">Enter your voucher or select a plan to connect.</p>
       </div>
-      
-      <div class="plans-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <h2 style="margin-bottom: 0;">Available Plans</h2>
-          <button class="pay-btn" style="width: auto; margin-top: 0; padding: 0.5rem 1rem;" onclick="openLoginModal()">Have a Voucher?</button>
+
+      <div class="card">
+        <div>
+          <h2 class="card-title">Voucher Login</h2>
+          <p class="card-desc">Already have a code? Enter it below.</p>
         </div>
-        <div id="plans-container" class="plans-grid">
-          <div class="loading">
-            <div class="spinner"></div>
-            <p>Loading plans...</p>
+        <div id="login-error" class="error-message hidden"></div>
+        <form id="login-form" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="login-voucher">Voucher Code</label>
+            <input class="form-input" id="login-voucher" placeholder="Enter your code" type="text" style="text-transform: uppercase;" required>
           </div>
-        </div>
+          <button type="submit" class="btn-primary" id="login-btn">
+            <span class="material-symbols-outlined">login</span>
+            Connect
+          </button>
+        </form>
       </div>
 
-      <div id="checkout-modal" class="modal hidden">
-        <div class="modal-content">
-          <span class="close-btn" onclick="closeModal()">&times;</span>
-          <h2>Checkout</h2>
-          <p id="checkout-plan-name"></p>
-          <p id="checkout-plan-price" style="color: var(--primary); font-weight: bold; margin-bottom: 1rem;"></p>
-          <form id="checkout-form">
-            <input type="hidden" id="checkout-plan-id" />
-            <div class="form-group">
-              <label for="checkout-email">Email</label>
-              <input type="email" id="checkout-email" required />
-            </div>
-            <div class="form-group">
-              <label for="checkout-phone">Phone Number</label>
-              <input type="tel" id="checkout-phone" required />
-            </div>
-            <button type="submit" class="pay-btn" id="pay-btn">Pay with Paystack</button>
-          </form>
-        </div>
+      <div class="divider-container">
+        <div class="divider-line"></div>
+        <span class="divider-text">Or Select a Plan</span>
+        <div class="divider-line"></div>
       </div>
 
-      <div id="status-modal" class="modal hidden">
-        <div class="modal-content" style="text-align: center;">
-          <h2 id="status-title">Processing</h2>
-          <div class="spinner" id="status-spinner" style="margin: 20px auto;"></div>
-          <p id="status-message">Please wait...</p>
-          <div id="voucher-display" class="hidden" style="margin-top: 20px; padding: 20px; background: #f0f0f0; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 2px;"></div>
-          <button id="status-close-btn" class="pay-btn hidden" onclick="closeStatusModal()" style="margin-top: 20px;">Close</button>
+      <div id="plans-container" class="plans-list">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading plans...</p>
         </div>
       </div>
-      <div id="login-modal" class="modal hidden">
-        <div class="modal-content">
-          <span class="close-btn" onclick="closeLoginModal()">&times;</span>
-          <h2>Voucher Login</h2>
-          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Enter your voucher code to access the internet.</p>
-          <div id="login-error" class="error-message hidden" style="margin-bottom: 1rem;"></div>
-          <form id="login-form">
-            <div class="form-group">
-              <label for="login-voucher">Voucher Code</label>
-              <input type="text" id="login-voucher" required placeholder="e.g. A1B2C3" style="text-transform: uppercase;" />
-            </div>
-            <button type="submit" class="pay-btn" id="login-btn">Login</button>
-          </form>
-        </div>
+    </main>
+
+    <div id="checkout-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h2 class="card-title">Checkout</h2>
+        <p id="checkout-plan-name" class="card-desc"></p>
+        <p id="checkout-plan-price" style="color: var(--primary); font-size: 24px; font-weight: 700; margin-bottom: 24px;"></p>
+        <form id="checkout-form" style="display: flex; flex-direction: column; gap: 16px;">
+          <input type="hidden" id="checkout-plan-id" />
+          <div class="form-group">
+            <label class="form-label" for="checkout-email">Email</label>
+            <input class="form-input" type="email" id="checkout-email" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="checkout-phone">Phone Number</label>
+            <input class="form-input" type="tel" id="checkout-phone" required />
+          </div>
+          <button type="submit" class="btn-primary" id="pay-btn" style="margin-top: 8px;">Pay with Paystack</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="status-modal" class="modal hidden">
+      <div class="modal-content" style="text-align: center;">
+        <h2 id="status-title" class="card-title">Processing</h2>
+        <div class="spinner" id="status-spinner" style="margin: 24px auto;"></div>
+        <p id="status-message" class="card-desc">Please wait...</p>
+        <div id="voucher-display" class="hidden" style="margin-top: 24px; padding: 24px; background: var(--bg-color); border: 1px solid var(--outline-variant); border-radius: 8px; font-family: var(--font-mono); font-size: 32px; font-weight: 700; letter-spacing: 0.1em; color: var(--primary);"></div>
+        <button id="status-close-btn" class="btn-primary hidden" onclick="closeStatusModal()" style="margin-top: 24px;">Close</button>
       </div>
     </div>
   `;
@@ -198,7 +193,7 @@ const renderApp = async () => {
     const voucherCode = voucherInput.value.toUpperCase();
 
     btn.disabled = true;
-    btn.textContent = 'Verifying...';
+    btn.innerHTML = `<span class="material-symbols-outlined">sync</span> Verifying...`;
     errorDiv.classList.add('hidden');
 
     try {
@@ -243,14 +238,14 @@ const renderApp = async () => {
       form.appendChild(dstField);
       document.body.appendChild(form);
       
-      btn.textContent = 'Connecting...';
+      btn.innerHTML = `<span class="material-symbols-outlined">wifi</span> Connecting...`;
       form.submit();
 
     } catch (err: any) {
       errorDiv.textContent = err.message;
       errorDiv.classList.remove('hidden');
       btn.disabled = false;
-      btn.textContent = 'Login';
+      btn.innerHTML = `<span class="material-symbols-outlined">login</span> Connect`;
     }
   });
 
@@ -301,60 +296,81 @@ const renderApp = async () => {
       return;
     }
 
-    plansContainer.innerHTML = plans.map(plan => `
-      <div class="plan-card" onclick="selectPlan('${plan.id}', '${plan.name}', ${plan.price})">
+    plansContainer.innerHTML = plans.map((plan, index) => {
+      // In the mockup, standard is highlighted. We'll highlight the second plan or first if only one.
+      const isPopular = (plans.length > 1 && index === 1) || plans.length === 1;
+      return `
+      <div class="plan-card ${isPopular ? 'popular' : ''}" onclick="selectPlan('${plan.id}', '${plan.name}', ${plan.price})">
+        ${isPopular ? '<div class="popular-badge">POPULAR</div>' : ''}
         <div class="plan-header">
-          <div class="plan-name">${plan.name}</div>
+          <div>
+            <h3 class="plan-name">${plan.name}</h3>
+            <p class="card-desc">${formatBytes(plan.data_limit_bytes)} / ${formatDuration(plan.duration_minutes)}</p>
+          </div>
           <div class="plan-price">${formatPrice(plan.price)}</div>
         </div>
         <div class="plan-features">
-          <div class="feature">
-            ${Icons.data}
-            <span>${formatBytes(plan.data_limit_bytes)}</span>
-          </div>
-          <div class="feature">
-            ${Icons.time}
-            <span>${formatDuration(plan.duration_minutes)}</span>
-          </div>
-          <div class="feature">
-            ${Icons.speed}
-            <span>↓ ${formatSpeed(plan.speed_down_kbps)} / ↑ ${formatSpeed(plan.speed_up_kbps)}</span>
-          </div>
+          <span class="material-symbols-outlined">speed</span>
+          High Speed ${formatSpeed(plan.speed_down_kbps)} / ${formatSpeed(plan.speed_up_kbps)}
         </div>
+        <button class="${isPopular ? 'btn-primary' : 'btn-outline'}" style="margin-top: 8px;">
+          Buy with Paystack
+        </button>
       </div>
-    `).join('');
+    `}).join('');
 
   } catch (error) {
     console.error(error);
     const plansContainer = document.getElementById('plans-container')!;
-    // Fallback UI for demonstration if backend is unreachable
     plansContainer.innerHTML = `
-      <div class="error-message" style="margin-bottom: 1rem;">
+      <div class="error-message" style="margin-bottom: 16px;">
         Could not connect to the server. Showing demo plans.
       </div>
       
-      <div class="plan-card">
+      <div class="plan-card" onclick="selectPlan('demo-1', 'Lite', 500)">
         <div class="plan-header">
-          <div class="plan-name">Daily Pass</div>
-          <div class="plan-price">$2.00</div>
+          <div>
+            <h3 class="plan-name">Lite</h3>
+            <p class="card-desc">1GB / 1 Day</p>
+          </div>
+          <div class="plan-price">500 NGN</div>
         </div>
         <div class="plan-features">
-          <div class="feature">${Icons.data}<span>Unlimited</span></div>
-          <div class="feature">${Icons.time}<span>1 day</span></div>
-          <div class="feature">${Icons.speed}<span>↓ 10 Mbps / ↑ 5 Mbps</span></div>
+          <span class="material-symbols-outlined">speed</span>
+          High Speed 4G/5G
         </div>
+        <button class="btn-outline" style="margin-top: 8px;">Buy with Paystack</button>
       </div>
 
-      <div class="plan-card">
+      <div class="plan-card popular" onclick="selectPlan('demo-2', 'Standard', 2000)">
+        <div class="popular-badge">POPULAR</div>
         <div class="plan-header">
-          <div class="plan-name">Weekly Pro</div>
-          <div class="plan-price">$10.00</div>
+          <div>
+            <h3 class="plan-name">Standard</h3>
+            <p class="card-desc">5GB / 7 Days</p>
+          </div>
+          <div class="plan-price">2,000 NGN</div>
         </div>
         <div class="plan-features">
-          <div class="feature">${Icons.data}<span>50 GB</span></div>
-          <div class="feature">${Icons.time}<span>7 days</span></div>
-          <div class="feature">${Icons.speed}<span>↓ 20 Mbps / ↑ 10 Mbps</span></div>
+          <span class="material-symbols-outlined">speed</span>
+          High Speed 4G/5G
         </div>
+        <button class="btn-primary" style="margin-top: 8px;">Buy with Paystack</button>
+      </div>
+      
+      <div class="plan-card" onclick="selectPlan('demo-3', 'Unlimited', 10000)">
+        <div class="plan-header">
+          <div>
+            <h3 class="plan-name">Unlimited</h3>
+            <p class="card-desc">30 Days</p>
+          </div>
+          <div class="plan-price">10,000 NGN</div>
+        </div>
+        <div class="plan-features">
+          <span class="material-symbols-outlined">speed</span>
+          High Speed 4G/5G (Fair Use Applies)
+        </div>
+        <button class="btn-outline" style="margin-top: 8px;">Buy with Paystack</button>
       </div>
     `;
   }
@@ -374,14 +390,6 @@ const renderApp = async () => {
 (window as any).closeStatusModal = () => {
   document.getElementById('status-modal')!.classList.add('hidden');
   window.history.replaceState({}, document.title, window.location.pathname);
-};
-
-(window as any).openLoginModal = () => {
-  document.getElementById('login-modal')!.classList.remove('hidden');
-};
-
-(window as any).closeLoginModal = () => {
-  document.getElementById('login-modal')!.classList.add('hidden');
 };
 
 renderApp();
