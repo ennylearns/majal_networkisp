@@ -29,6 +29,18 @@ interface Router {
   last_seen_at: string;
 }
 
+interface Plan {
+  id: number;
+  name: string;
+  price: string;
+  data_limit_bytes: number | null;
+  duration_minutes: number;
+  speed_down_kbps: number | null;
+  speed_up_kbps: number | null;
+  mikrotik_profile_name: string;
+  enabled: boolean;
+}
+
 // Global state for auth token
 let authToken = localStorage.getItem('majal_admin_token');
 
@@ -59,6 +71,15 @@ const btnCloseAddRouter = document.getElementById('btn-close-add-router');
 const btnCancelAddRouter = document.getElementById('btn-cancel-add-router');
 const addRouterForm = document.getElementById('add-router-form') as HTMLFormElement;
 const addRouterError = document.getElementById('add-router-error');
+
+// Plans View Elements
+const plansTableBody = document.getElementById('plans-table-body');
+const btnAddPlan = document.getElementById('btn-add-plan');
+const modalAddPlan = document.getElementById('modal-add-plan');
+const btnCloseAddPlan = document.getElementById('btn-close-add-plan');
+const btnCancelAddPlan = document.getElementById('btn-cancel-add-plan');
+const addPlanForm = document.getElementById('add-plan-form') as HTMLFormElement;
+const addPlanError = document.getElementById('add-plan-error');
 
 // Initialize
 function init() {
@@ -246,6 +267,8 @@ function switchView(targetView: string) {
     loadRoutersData();
   } else if (targetView === 'dashboard') {
     loadDashboardData();
+  } else if (targetView === 'plans') {
+    loadPlansData();
   }
 }
 
@@ -370,6 +393,154 @@ addRouterForm?.addEventListener('submit', async (e) => {
     if (addRouterError) {
       addRouterError.textContent = error.message;
       addRouterError.classList.remove('hidden');
+    }
+  } finally {
+    if (spinner) spinner.classList.add('hidden');
+  }
+});
+
+// Plans Logic
+async function loadPlansData() {
+  if (!plansTableBody) return;
+  plansTableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-secondary">Loading...</td></tr>`;
+  
+  try {
+    const res = await fetch('/api/plans', {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed to load plans');
+    
+    const plans: Plan[] = await res.json();
+    renderPlansTable(plans);
+  } catch (error) {
+    console.error(error);
+    plansTableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-error">Failed to load plans</td></tr>`;
+  }
+}
+
+function renderPlansTable(plans: Plan[]) {
+  if (!plansTableBody) return;
+  
+  if (plans.length === 0) {
+    plansTableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-secondary">No plans found</td></tr>`;
+    return;
+  }
+  
+  plansTableBody.innerHTML = plans.map(plan => {
+    const statusColor = plan.enabled ? 'text-[#059669]' : 'text-error';
+    const statusText = plan.enabled ? 'Active' : 'Disabled';
+    const toggleAction = plan.enabled ? 'Disable' : 'Enable';
+    const toggleClass = plan.enabled ? 'text-error hover:text-error/80' : 'text-[#059669] hover:text-[#059669]/80';
+    
+    let details = `${Math.round(plan.duration_minutes / 1440)} Days`;
+    if (plan.data_limit_bytes !== null && plan.data_limit_bytes !== undefined) {
+      details += ` • ${(plan.data_limit_bytes / 1073741824).toFixed(1)}GB`;
+    } else {
+      details += ` • Unlimited`;
+    }
+    if (plan.speed_down_kbps) {
+      details += ` • ${(plan.speed_down_kbps / 1000).toFixed(1)}Mbps DL`;
+    }
+
+    return `
+      <tr class="hover:bg-surface-container/50 transition-colors">
+          <td class="px-6 py-4 text-on-background font-medium">${escapeHtml(plan.name)}</td>
+          <td class="px-6 py-4 text-secondary">₦${Number(plan.price).toLocaleString()}</td>
+          <td class="px-6 py-4 text-secondary text-sm">${escapeHtml(details)}</td>
+          <td class="px-6 py-4">
+              <span class="font-label-sm text-label-sm ${statusColor}">${statusText}</span>
+          </td>
+          <td class="px-6 py-4">
+              <button class="${toggleClass} font-label-sm text-label-sm transition-colors" onclick="togglePlanStatus(${plan.id}, ${!plan.enabled})">${toggleAction}</button>
+          </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+(window as any).togglePlanStatus = async (id: number, enable: boolean) => {
+  const action = enable ? 'enable' : 'disable';
+  if (!confirm(`Are you sure you want to ${action} this plan?`)) return;
+  
+  try {
+    const res = await fetch(`/api/plans/${id}/${action}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || `Failed to ${action} plan`);
+    }
+    
+    loadPlansData();
+  } catch (error: any) {
+    alert(error.message);
+  }
+};
+
+function showAddPlanModal() {
+  if (modalAddPlan) modalAddPlan.classList.remove('hidden');
+  if (addPlanError) addPlanError.classList.add('hidden');
+  addPlanForm?.reset();
+}
+
+function hideAddPlanModal() {
+  if (modalAddPlan) modalAddPlan.classList.add('hidden');
+}
+
+btnAddPlan?.addEventListener('click', showAddPlanModal);
+btnCloseAddPlan?.addEventListener('click', hideAddPlanModal);
+btnCancelAddPlan?.addEventListener('click', hideAddPlanModal);
+
+addPlanForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const name = (document.getElementById('plan-name') as HTMLInputElement).value;
+  const price = Number((document.getElementById('plan-price') as HTMLInputElement).value);
+  const dataAllowanceGb = (document.getElementById('plan-data-allowance') as HTMLInputElement).value;
+  const durationDays = Number((document.getElementById('plan-duration') as HTMLInputElement).value);
+  const downloadSpeed = (document.getElementById('plan-download') as HTMLInputElement).value;
+  const uploadSpeed = (document.getElementById('plan-upload') as HTMLInputElement).value;
+  
+  const data_allowance = dataAllowanceGb ? Number(dataAllowanceGb) * 1073741824 : null;
+  
+  const spinner = document.getElementById('add-plan-spinner');
+  
+  if (spinner) spinner.classList.remove('hidden');
+  if (addPlanError) addPlanError.classList.add('hidden');
+  
+  try {
+    const res = await fetch('/api/plans', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        name,
+        price,
+        data_allowance,
+        duration: durationDays,
+        download_speed: downloadSpeed,
+        upload_speed: uploadSpeed
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to add plan');
+    }
+    
+    hideAddPlanModal();
+    loadPlansData();
+    
+  } catch (error: any) {
+    if (addPlanError) {
+      addPlanError.textContent = error.message;
+      addPlanError.classList.remove('hidden');
     }
   } finally {
     if (spinner) spinner.classList.add('hidden');
