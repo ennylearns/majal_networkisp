@@ -45,7 +45,7 @@ describe('Audit Trail API', () => {
   it('should log plan creation and allow querying it', async () => {
     // 1. Create a plan, which should trigger an audit log
     const res = await request(app)
-      .post('/api/plans')
+      .post('/api/plans').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw')
       .send({
         name: 'Audit Plan',
         price: 50,
@@ -60,7 +60,7 @@ describe('Audit Trail API', () => {
     await new Promise(r => setTimeout(r, 100));
 
     // 2. Query audit logs
-    const auditRes = await request(app).get('/api/audit-logs');
+    const auditRes = await request(app).get('/api/audit-logs').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
     expect(auditRes.status).toBe(200);
     expect(auditRes.body.length).toBeGreaterThan(0);
     expect(auditRes.body[0].action_type).toBe('PLAN_CREATED');
@@ -72,7 +72,7 @@ describe('Audit Trail API', () => {
     await auditService.logAction(null, 'TEST_ACTION', 'test', 1, {});
     await auditService.logAction(null, 'OTHER_ACTION', 'test', 2, {});
 
-    const auditRes = await request(app).get('/api/audit-logs?actionType=TEST_ACTION');
+    const auditRes = await request(app).get('/api/audit-logs?actionType=TEST_ACTION').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
     expect(auditRes.status).toBe(200);
     expect(auditRes.body.length).toBe(1);
     expect(auditRes.body[0].action_type).toBe('TEST_ACTION');

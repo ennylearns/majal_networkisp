@@ -6,14 +6,14 @@ The `getAdminId` helper already verifies the JWT and returns the admin's id or `
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] A request to any protected admin route with no `Authorization` header receives `401`
-- [ ] A request with an expired or malformed JWT receives `401`
-- [ ] A valid admin JWT allows the request through and the business logic executes normally
-- [ ] Public routes (`GET /api/plans`, checkout, webhook, sessions, provisioning) are unaffected and require no token
-- [ ] The audit log for any admin action records the correct admin id (not `null`)
-- [ ] New or updated integration tests cover the 401 path for at least two protected routes
+- [x] A request to any protected admin route with no `Authorization` header receives `401`
+- [x] A request with an expired or malformed JWT receives `401`
+- [x] A valid admin JWT allows the request through and the business logic executes normally
+- [x] Public routes (`GET /api/plans`, checkout, webhook, sessions, provisioning) are unaffected and require no token
+- [x] The audit log for any admin action records the correct admin id (not `null`)
+- [x] New or updated integration tests cover the 401 path for at least two protected routes
 
 f9a78CbDrQg40Udx
 f9a78CbDrQg40Udx

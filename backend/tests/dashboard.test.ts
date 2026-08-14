@@ -83,7 +83,7 @@ describe('Admin Dashboard API', () => {
   });
 
   it('GET /api/dashboard/summary should return business snapshot', async () => {
-    const res = await request(app).get('/api/dashboard/summary');
+    const res = await request(app).get('/api/dashboard/summary').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       todayRevenue: 1500,
@@ -97,7 +97,7 @@ describe('Admin Dashboard API', () => {
   });
 
   it('GET /api/dashboard/active-sessions should return active sessions across routers', async () => {
-    const res = await request(app).get('/api/dashboard/active-sessions');
+    const res = await request(app).get('/api/dashboard/active-sessions').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body[0]).toEqual({
@@ -113,7 +113,7 @@ describe('Admin Dashboard API', () => {
   });
 
   it('GET /api/dashboard/analytics/revenue should return revenue breakdown', async () => {
-    const res = await request(app).get('/api/dashboard/analytics/revenue');
+    const res = await request(app).get('/api/dashboard/analytics/revenue').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       today: 500,

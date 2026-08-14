@@ -235,7 +235,7 @@ describe('Voucher Generation and E2E Tests', () => {
 
     const disableRouterSpy = vi.spyOn(fakeMikroTikService, 'disableUser');
 
-    const res = await request(app).put('/api/vouchers/99/disable');
+    const res = await request(app).put('/api/vouchers/99/disable').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
     if (res.status !== 200) {
        console.log('DISABLE TEST FAILED:', res.status, res.text);
     }
@@ -253,7 +253,7 @@ describe('Voucher Generation and E2E Tests', () => {
       phone_number: '999888777'
     });
 
-    const res = await request(app).get('/api/vouchers?phone_number=999888777');
+    const res = await request(app).get('/api/vouchers?phone_number=999888777').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
     expect(res.status).toBe(200);
     expect(res.body.length).toBeGreaterThan(0);
     expect(res.body[0].id).toBe(100);

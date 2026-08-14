@@ -61,7 +61,7 @@ describe('Plan Management', () => {
 
   it('should create a plan and push to routers', async () => {
     const res = await request(app)
-      .post('/api/plans')
+      .post('/api/plans').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw')
       .send({
         name: 'Basic',
         price: 1000,
@@ -77,18 +77,18 @@ describe('Plan Management', () => {
   });
 
   it('should enable and disable a plan', async () => {
-    const disableRes = await request(app).put(`/api/plans/1/disable`);
+    const disableRes = await request(app).put(`/api/plans/1/disable`).set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
     expect(disableRes.status).toBe(200);
     expect(disableRes.body.plan.enabled).toBe(false);
 
-    const enableRes = await request(app).put(`/api/plans/1/enable`);
+    const enableRes = await request(app).put(`/api/plans/1/enable`).set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
     expect(enableRes.status).toBe(200);
     expect(enableRes.body.plan.enabled).toBe(true);
   });
 
   describe('GET /api/plans — portal field normalization', () => {
     it('returns plans with data_limit_bytes, duration_minutes, speed_down_kbps, speed_up_kbps', async () => {
-      const res = await request(app).get('/api/plans');
+      const res = await request(app).get('/api/plans').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
       expect(res.status).toBe(200);
 
       const plan = res.body[1]; // Weekly Pro
@@ -99,7 +99,7 @@ describe('Plan Management', () => {
     });
 
     it('returns null data_limit_bytes for unlimited plans and null speed caps as null', async () => {
-      const res = await request(app).get('/api/plans');
+      const res = await request(app).get('/api/plans').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
       expect(res.status).toBe(200);
 
       const dailyPlan = res.body[0]; // Daily Pass — data_allowance: null
@@ -107,7 +107,7 @@ describe('Plan Management', () => {
     });
 
     it('does NOT expose raw DB column names (data_allowance, download_speed, upload_speed, duration) in the portal response', async () => {
-      const res = await request(app).get('/api/plans');
+      const res = await request(app).get('/api/plans').set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc4NjcyMTMwNX0.q3bZDCZzhhB6pGwEsnhCGlB_uofIVZ_uy_OYACv_-fw');
       expect(res.status).toBe(200);
 
       for (const plan of res.body) {

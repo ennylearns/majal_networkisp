@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { MikroTikService, FakeMikroTikService } from './services/MikroTikService';
@@ -23,6 +23,13 @@ function getAdminId(req: Request): number | null {
   } catch (e) {
     return null;
   }
+}
+
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!getAdminId(req)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
 }
 
 const app = express();
@@ -68,7 +75,7 @@ app.post('/api/auth', async (req: Request, res: Response) => {
   return res.status(401).json({ error: 'Invalid credentials' });
 });
 
-app.post('/api/routers', async (req: Request, res: Response) => {
+app.post('/api/routers', requireAdmin, async (req: Request, res: Response) => {
   const { name, location } = req.body;
   try {
     const result = await pool.query(
@@ -91,7 +98,7 @@ app.post('/api/routers', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/routers/:id/revoke-token', async (req: Request, res: Response) => {
+app.post('/api/routers/:id/revoke-token', requireAdmin, async (req: Request, res: Response) => {
   const { token } = req.body;
   try {
     await provisioningService.revokeToken(token);
@@ -172,7 +179,7 @@ app.post('/api/provision-report', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/routers', async (req: Request, res: Response) => {
+app.get('/api/routers', requireAdmin, async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
       SELECT id, name, location, status, routeros_version, architecture, last_seen_at
@@ -185,7 +192,7 @@ app.get('/api/routers', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/dashboard/stats', async (req: Request, res: Response) => {
+app.get('/api/dashboard/stats', requireAdmin, async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -201,7 +208,7 @@ app.get('/api/dashboard/stats', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/dashboard/summary', async (req: Request, res: Response) => {
+app.get('/api/dashboard/summary', requireAdmin, async (req: Request, res: Response) => {
   try {
     const todayRevenueResult = await pool.query(`
       SELECT COALESCE(SUM(amount), 0) AS today_revenue
@@ -250,7 +257,7 @@ app.get('/api/dashboard/summary', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/dashboard/active-sessions', async (req: Request, res: Response) => {
+app.get('/api/dashboard/active-sessions', requireAdmin, async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -287,7 +294,7 @@ app.get('/api/dashboard/active-sessions', async (req: Request, res: Response) =>
   }
 });
 
-app.get('/api/dashboard/analytics/revenue', async (req: Request, res: Response) => {
+app.get('/api/dashboard/analytics/revenue', requireAdmin, async (req: Request, res: Response) => {
   try {
     const revenuePeriodsResult = await pool.query(`
       SELECT 
@@ -340,7 +347,7 @@ app.get('/api/dashboard/analytics/revenue', async (req: Request, res: Response) 
   }
 });
 
-app.post('/api/plans', async (req: Request, res: Response) => {
+app.post('/api/plans', requireAdmin, async (req: Request, res: Response) => {
   const { name, price, data_allowance, duration, download_speed, upload_speed } = req.body;
   
   try {
@@ -379,7 +386,7 @@ app.post('/api/plans', async (req: Request, res: Response) => {
   }
 });
 
-app.put('/api/plans/:id/enable', async (req: Request, res: Response) => {
+app.put('/api/plans/:id/enable', requireAdmin, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const result = await pool.query('UPDATE plans SET enabled = true WHERE id = $1 RETURNING *', [id]);
@@ -393,7 +400,7 @@ app.put('/api/plans/:id/enable', async (req: Request, res: Response) => {
   }
 });
 
-app.put('/api/plans/:id/disable', async (req: Request, res: Response) => {
+app.put('/api/plans/:id/disable', requireAdmin, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const result = await pool.query('UPDATE plans SET enabled = false WHERE id = $1 RETURNING *', [id]);
@@ -510,7 +517,7 @@ app.post('/api/webhooks/paystack', async (req: Request, res: Response) => {
   return res.sendStatus(200);
 });
 
-app.get('/api/payments', async (req: Request, res: Response) => {
+app.get('/api/payments', requireAdmin, async (req: Request, res: Response) => {
   try {
     const result = await pool.query(`
       SELECT t.*, c.email, c.phone_number, p.name as plan_name
@@ -676,7 +683,7 @@ app.get('/api/sessions', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/vouchers', async (req: Request, res: Response) => {
+app.get('/api/vouchers', requireAdmin, async (req: Request, res: Response) => {
   const { phone_number, email } = req.query;
   try {
     let query = `
@@ -706,7 +713,7 @@ app.get('/api/vouchers', async (req: Request, res: Response) => {
   }
 });
 
-app.put('/api/vouchers/:id/disable', async (req: Request, res: Response) => {
+app.put('/api/vouchers/:id/disable', requireAdmin, async (req: Request, res: Response) => {
   const { id } = req.params;
   const { code } = req.body || {};
   
@@ -756,7 +763,7 @@ app.put('/api/vouchers/:id/disable', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/audit-logs', async (req: Request, res: Response) => {
+app.get('/api/audit-logs', requireAdmin, async (req: Request, res: Response) => {
   try {
     const filters: { actionType?: string; targetEntity?: string; adminId?: number; limit?: number; offset?: number } = {};
     if (req.query.actionType) filters.actionType = req.query.actionType as string;
