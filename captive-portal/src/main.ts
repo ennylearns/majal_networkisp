@@ -264,11 +264,15 @@ const renderApp = async () => {
     const email = (document.getElementById('checkout-email') as HTMLInputElement).value;
     const phoneNumber = (document.getElementById('checkout-phone') as HTMLInputElement).value;
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const routerIdStr = urlParams.get('router_id');
+    const routerId = routerIdStr ? Number(routerIdStr) : null;
+
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: Number(planId), email, phoneNumber })
+        body: JSON.stringify({ planId: Number(planId), email, phoneNumber, routerId })
       });
       if (!res.ok) throw new Error('Checkout failed');
       const data = await res.json();

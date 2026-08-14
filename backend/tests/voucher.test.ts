@@ -34,6 +34,14 @@ describe('Voucher Generation and E2E Tests', () => {
       if (queryText.includes('SELECT id FROM routers WHERE status')) {
         return { rows: routers.filter(r => r.status === values![0]) };
       }
+      if (queryText.includes('SELECT status FROM routers WHERE id = $1')) {
+        const r = routers.find(r => r.id === values![0]);
+        return { rows: r ? [{ status: r.status }] : [] };
+      }
+      if (queryText.includes('SELECT * FROM routers WHERE id')) {
+        const r = routers.find(r => r.id === values![0]);
+        return { rows: r ? [r] : [] };
+      }
       
       // Simulate Plans
       if (queryText.includes('SELECT * FROM plans WHERE id')) {
@@ -54,7 +62,7 @@ describe('Voucher Generation and E2E Tests', () => {
 
       // Simulate Transactions
       if (queryText.includes('INSERT INTO transactions')) {
-        const newT = { id: transactions.length + 1, customer_id: values![0], plan_id: values![1], paystack_reference: values![2], amount: values![3], status: values![4] };
+        const newT = { id: transactions.length + 1, customer_id: values![0], plan_id: values![1], router_id: values![2], paystack_reference: values![3], amount: values![4], status: values![5] };
         transactions.push(newT);
         return { rows: [newT] };
       }
@@ -139,7 +147,7 @@ describe('Voucher Generation and E2E Tests', () => {
     // 1. Plan selection -> checkout
     const checkoutRes = await request(app)
       .post('/api/checkout')
-      .send({ planId: 1, email: 'test@example.com', phoneNumber: '0000' });
+      .send({ planId: 1, email: 'test@example.com', phoneNumber: '0000', routerId: 1 });
     
     expect(checkoutRes.status).toBe(200);
     const reference = checkoutRes.body.reference;
@@ -184,7 +192,7 @@ describe('Voucher Generation and E2E Tests', () => {
 
   it('Voucher is returned exactly once', async () => {
     // Mock successful tx
-    transactions.push({ id: 1, customer_id: 1, plan_id: 1, paystack_reference: 'ref_123', status: 'successful' });
+    transactions.push({ id: 1, customer_id: 1, plan_id: 1, router_id: 1, paystack_reference: 'ref_123', status: 'successful' });
     customers.push({ id: 1, email: 'e', phone_number: '1' });
 
     const res1 = await request(app).post('/api/transactions/ref_123/voucher');
@@ -198,7 +206,7 @@ describe('Voucher Generation and E2E Tests', () => {
     vi.useFakeTimers();
     fakeMikroTikService.setCondition('unreachable', 0); // fail always
     
-    transactions.push({ id: 2, customer_id: 1, plan_id: 1, paystack_reference: 'ref_fail', status: 'successful' });
+    transactions.push({ id: 2, customer_id: 1, plan_id: 1, router_id: 1, paystack_reference: 'ref_fail', status: 'successful' });
     customers.push({ id: 1, email: 'e', phone_number: '1' });
 
     const createRouterSpy = vi.spyOn(fakeMikroTikService, 'createUser');
@@ -257,5 +265,39 @@ describe('Voucher Generation and E2E Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.length).toBeGreaterThan(0);
     expect(res.body[0].id).toBe(100);
+  });
+
+  it('End-to-end integration test verifies that a checkout on Router A results in a MikroTik user on Router A, not Router B', async () => {
+    // Add a second router
+    routers.push({ id: 2, name: 'Secondary Router', status: 'online' });
+    const createRouterSpy = vi.spyOn(fakeMikroTikService, 'createUser');
+
+    // Checkout on Router 2
+    const checkoutRes = await request(app)
+      .post('/api/checkout')
+      .send({ planId: 1, email: 'router2@example.com', phoneNumber: '2222', routerId: 2 });
+    expect(checkoutRes.status).toBe(200);
+    const reference = checkoutRes.body.reference;
+
+    // Payment webhook
+    await request(app)
+      .post('/api/webhooks/paystack')
+      .set('x-paystack-signature', 'valid_signature')
+      .send({ event: 'charge.success', data: { reference, amount: 1000 } });
+
+    // Issue voucher
+    const voucherRes = await request(app).post(`/api/transactions/${reference}/voucher`);
+    expect(voucherRes.status).toBe(201);
+    const code = voucherRes.body.code;
+
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Verify it was created on Router 2, NOT Router 1
+    expect(createRouterSpy).toHaveBeenCalledWith(2, code, 'Basic_Plan');
+    expect(createRouterSpy).not.toHaveBeenCalledWith(1, code, 'Basic_Plan');
+
+    // Check voucher DB record has router_id = 2
+    const voucher = vouchers.find(v => v.code_hash === voucherService.hashVoucher(code));
+    expect(voucher.router_id).toBe(2);
   });
 });

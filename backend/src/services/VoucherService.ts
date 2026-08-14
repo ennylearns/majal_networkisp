@@ -63,9 +63,9 @@ export class VoucherService {
 
     const { code, hash } = await this.generateUniqueCode();
 
-    // Default to the first available router for now (or a specific router if the logic requires it)
-    const routerResult = await pool.query('SELECT id FROM routers WHERE status = $1 LIMIT 1', ['online']);
-    const routerId = routerResult.rows.length > 0 ? routerResult.rows[0].id : null;
+    const routerId = tx.router_id;
+    const routerResult = await pool.query('SELECT status FROM routers WHERE id = $1', [routerId]);
+    const isOnline = routerResult.rows.length > 0 && routerResult.rows[0].status === 'online';
 
     const insertResult = await pool.query(`
       INSERT INTO vouchers (code_hash, plan_id, transaction_id, phone_number, email, status, activation_status, router_id)
@@ -76,7 +76,7 @@ export class VoucherService {
     const voucherId = insertResult.rows[0].id;
 
     // Start activation asynchronously
-    if (routerId) {
+    if (isOnline) {
       this.activateVoucher(voucherId, routerId, code, tx.mikrotik_profile_name).catch(err => {
         console.error('Failed to activate voucher:', err);
       });

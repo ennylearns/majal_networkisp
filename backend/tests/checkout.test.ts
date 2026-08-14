@@ -17,6 +17,9 @@ describe('Checkout and Webhook Tests', () => {
     customers = [];
     
     poolQueryMock = vi.spyOn(pool, 'query').mockImplementation(async (queryText: string, values?: any[]): Promise<any> => {
+      if (queryText.includes('SELECT * FROM routers WHERE id')) {
+        return { rows: [{ id: values![0], status: 'online' }] };
+      }
       if (queryText.includes('SELECT * FROM plans WHERE id')) {
         return { rows: [{ id: values![0], name: 'Test Plan', price: 10.00, enabled: true }] };
       }
@@ -30,7 +33,7 @@ describe('Checkout and Webhook Tests', () => {
         return { rows: [newC] };
       }
       if (queryText.includes('INSERT INTO transactions')) {
-        const newT = { id: transactions.length + 1, customer_id: values![0], plan_id: values![1], paystack_reference: values![2], amount: values![3], status: values![4] };
+        const newT = { id: transactions.length + 1, customer_id: values![0], plan_id: values![1], router_id: values![2], paystack_reference: values![3], amount: values![4], status: values![5] };
         transactions.push(newT);
         return { rows: [newT] };
       }
@@ -63,7 +66,8 @@ describe('Checkout and Webhook Tests', () => {
       .send({
         planId: 1,
         email: 'customer@example.com',
-        phoneNumber: '1234567890'
+        phoneNumber: '1234567890',
+        routerId: 1
       });
 
     expect(response.status).toBe(200);
@@ -81,7 +85,8 @@ describe('Checkout and Webhook Tests', () => {
       .send({
         planId: 1,
         email: 'customer@example.com',
-        phoneNumber: '1234567890'
+        phoneNumber: '1234567890',
+        routerId: 1
       });
     const reference = checkoutResponse.body.reference;
 
@@ -117,7 +122,7 @@ describe('Checkout and Webhook Tests', () => {
   it('should be idempotent for duplicate webhooks', async () => {
     const checkoutResponse = await request(app)
       .post('/api/checkout')
-      .send({ planId: 1, email: 'customer@example.com', phoneNumber: '1234567890' });
+      .send({ planId: 1, email: 'customer@example.com', phoneNumber: '1234567890', routerId: 1 });
     const reference = checkoutResponse.body.reference;
 
     await request(app)

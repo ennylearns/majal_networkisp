@@ -58,6 +58,7 @@ CREATE TABLE transactions (
     id SERIAL PRIMARY KEY,
     customer_id INTEGER REFERENCES customers(id),
     plan_id INTEGER REFERENCES plans(id),
+    router_id INTEGER REFERENCES routers(id),
     paystack_reference VARCHAR(255) UNIQUE NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
     status VARCHAR(50) DEFAULT 'pending', -- pending, successful, failed, cancelled, refunded

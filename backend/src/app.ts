@@ -449,12 +449,17 @@ app.get('/api/plans', async (req: Request, res: Response) => {
 });
 
 app.post('/api/checkout', async (req: Request, res: Response) => {
-  const { planId, email, phoneNumber } = req.body;
-  if (!planId || !email || !phoneNumber) {
-    return res.status(400).json({ error: 'planId, email, and phoneNumber are required' });
+  const { planId, email, phoneNumber, routerId } = req.body;
+  if (!planId || !email || !phoneNumber || !routerId) {
+    return res.status(400).json({ error: 'planId, email, phoneNumber, and routerId are required' });
   }
 
   try {
+    const routerResult = await pool.query("SELECT * FROM routers WHERE id = $1 AND status = 'online'", [routerId]);
+    if (routerResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Router not found or offline' });
+    }
+
     const planResult = await pool.query('SELECT * FROM plans WHERE id = $1', [planId]);
     if (planResult.rows.length === 0) {
       return res.status(404).json({ error: 'Plan not found' });
@@ -476,8 +481,8 @@ app.post('/api/checkout', async (req: Request, res: Response) => {
     const reference = crypto.randomUUID();
     
     await pool.query(
-      'INSERT INTO transactions (customer_id, plan_id, paystack_reference, amount, status) VALUES ($1, $2, $3, $4, $5)',
-      [customerId, planId, reference, plan.price, 'pending']
+      'INSERT INTO transactions (customer_id, plan_id, router_id, paystack_reference, amount, status) VALUES ($1, $2, $3, $4, $5, $6)',
+      [customerId, planId, routerId, reference, plan.price, 'pending']
     );
 
     const checkout = await paymentService.initialize(plan.price, email, reference);
