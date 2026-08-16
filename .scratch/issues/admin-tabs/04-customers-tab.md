@@ -4,8 +4,8 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Sidebar "Customers" link navigates to the Customers view.
-- [ ] Evaluate backend requirements: Add a dedicated `GET /api/customers` endpoint if needed, or utilize `GET /api/payments` to extract and display customer data.
-- [ ] View displays a list of customers and allows expanding to see their related transaction and plan history.
+- [x] Sidebar "Customers" link navigates to the Customers view.
+- [x] Evaluate backend requirements: Add a dedicated `GET /api/customers` endpoint if needed, or utilize `GET /api/payments` to extract and display customer data.
+- [x] View displays a list of customers and allows expanding to see their related transaction and plan history.
