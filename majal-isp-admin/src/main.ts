@@ -41,6 +41,18 @@ interface Plan {
   enabled: boolean;
 }
 
+interface Voucher {
+  id: number;
+  status: string;
+  activation_status: string;
+  issued_at: string;
+  phone_number: string;
+  email: string;
+  amount: string;
+  paystack_reference: string;
+  plan_name: string;
+}
+
 // Global state for auth token
 let authToken = localStorage.getItem('majal_admin_token');
 
@@ -80,6 +92,11 @@ const btnCloseAddPlan = document.getElementById('btn-close-add-plan');
 const btnCancelAddPlan = document.getElementById('btn-cancel-add-plan');
 const addPlanForm = document.getElementById('add-plan-form') as HTMLFormElement;
 const addPlanError = document.getElementById('add-plan-error');
+
+// Vouchers View Elements
+const vouchersTableBody = document.getElementById('vouchers-table-body');
+const vouchersSearchInput = document.getElementById('vouchers-search-input') as HTMLInputElement;
+const btnSearchVouchers = document.getElementById('btn-search-vouchers');
 
 // Initialize
 function init() {
@@ -269,6 +286,8 @@ function switchView(targetView: string) {
     loadDashboardData();
   } else if (targetView === 'plans') {
     loadPlansData();
+  } else if (targetView === 'vouchers') {
+    loadVouchersData();
   }
 }
 
@@ -546,6 +565,97 @@ addPlanForm?.addEventListener('submit', async (e) => {
     if (spinner) spinner.classList.add('hidden');
   }
 });
+
+// Vouchers Logic
+async function loadVouchersData(searchQuery?: string) {
+  if (!vouchersTableBody) return;
+  vouchersTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-secondary">Loading...</td></tr>`;
+  
+  try {
+    let url = '/api/vouchers';
+    if (searchQuery) {
+      const isEmail = searchQuery.includes('@');
+      url += isEmail ? `?email=${encodeURIComponent(searchQuery)}` : `?phone_number=${encodeURIComponent(searchQuery)}`;
+    }
+
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed to load vouchers');
+    
+    const vouchers: Voucher[] = await res.json();
+    renderVouchersTable(vouchers);
+  } catch (error) {
+    console.error(error);
+    vouchersTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-error">Failed to load vouchers</td></tr>`;
+  }
+}
+
+function renderVouchersTable(vouchers: Voucher[]) {
+  if (!vouchersTableBody) return;
+  
+  if (vouchers.length === 0) {
+    vouchersTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-secondary">No vouchers found</td></tr>`;
+    return;
+  }
+  
+  vouchersTableBody.innerHTML = vouchers.map(voucher => {
+    const statusColor = voucher.status === 'active' ? 'text-[#059669]' : voucher.status === 'disabled' ? 'text-error' : 'text-primary';
+    const statusText = voucher.status ? voucher.status.charAt(0).toUpperCase() + voucher.status.slice(1) : '-';
+    const actionDisabled = voucher.status === 'disabled';
+    
+    return `
+      <tr class="hover:bg-surface-container/50 transition-colors">
+          <td class="px-6 py-4 text-on-background font-medium">${escapeHtml(voucher.plan_name || '-')}</td>
+          <td class="px-6 py-4 text-secondary">
+            <div>${escapeHtml(voucher.phone_number || '-')}</div>
+            <div class="text-sm">${escapeHtml(voucher.email || '-')}</div>
+          </td>
+          <td class="px-6 py-4">
+              <span class="font-label-sm text-label-sm ${statusColor}">${statusText}</span>
+              ${voucher.activation_status === 'ACTIVATED' ? '' : `<br><span class="text-xs text-secondary mt-1 block">Not activated</span>`}
+          </td>
+          <td class="px-6 py-4">
+              <button class="text-error hover:text-error/80 font-label-sm text-label-sm transition-colors disabled:opacity-50" 
+                onclick="disableVoucher(${voucher.id})" ${actionDisabled ? 'disabled' : ''}>Revoke Access</button>
+          </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+btnSearchVouchers?.addEventListener('click', () => {
+  const query = vouchersSearchInput?.value.trim();
+  loadVouchersData(query);
+});
+
+vouchersSearchInput?.addEventListener('keyup', (e) => {
+  if (e.key === 'Enter') {
+    const query = vouchersSearchInput?.value.trim();
+    loadVouchersData(query);
+  }
+});
+
+(window as any).disableVoucher = async (id: number) => {
+  if (!confirm('Are you sure you want to revoke network access for this voucher?')) return;
+  
+  try {
+    const res = await fetch(`/api/vouchers/${id}/disable`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Failed to revoke voucher');
+    }
+    
+    loadVouchersData(vouchersSearchInput?.value.trim());
+  } catch (error: any) {
+    alert(error.message);
+  }
+};
 
 // Start
 init();

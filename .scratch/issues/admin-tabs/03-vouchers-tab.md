@@ -4,9 +4,9 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Sidebar "Vouchers" link navigates to the Vouchers view.
-- [ ] View fetches and displays vouchers from `GET /api/vouchers`.
-- [ ] Search functionality to filter vouchers by phone number or email (utilizing query parameters on the endpoint).
-- [ ] Action button to manually revoke network access by calling `PUT /api/vouchers/:id/disable`.
+- [x] Sidebar "Vouchers" link navigates to the Vouchers view.
+- [x] View fetches and displays vouchers from `GET /api/vouchers`.
+- [x] Search functionality to filter vouchers by phone number or email (utilizing query parameters on the endpoint).
+- [x] Action button to manually revoke network access by calling `PUT /api/vouchers/:id/disable`.
