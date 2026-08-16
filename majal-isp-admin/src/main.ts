@@ -53,6 +53,23 @@ interface Voucher {
   plan_name: string;
 }
 
+interface CustomerTransaction {
+  id: number;
+  plan_name: string;
+  amount: string;
+  status: string;
+  created_at: string;
+  paystack_reference: string;
+}
+
+interface Customer {
+  id: number;
+  email: string;
+  phone_number: string;
+  created_at: string;
+  transactions: CustomerTransaction[];
+}
+
 // Global state for auth token
 let authToken = localStorage.getItem('majal_admin_token');
 
@@ -97,6 +114,9 @@ const addPlanError = document.getElementById('add-plan-error');
 const vouchersTableBody = document.getElementById('vouchers-table-body');
 const vouchersSearchInput = document.getElementById('vouchers-search-input') as HTMLInputElement;
 const btnSearchVouchers = document.getElementById('btn-search-vouchers');
+
+// Customers View Elements
+const customersTableBody = document.getElementById('customers-table-body');
 
 // Initialize
 function init() {
@@ -288,6 +308,8 @@ function switchView(targetView: string) {
     loadPlansData();
   } else if (targetView === 'vouchers') {
     loadVouchersData();
+  } else if (targetView === 'customers') {
+    loadCustomersData();
   }
 }
 
@@ -656,6 +678,75 @@ vouchersSearchInput?.addEventListener('keyup', (e) => {
     alert(error.message);
   }
 };
+
+// Customers Logic
+async function loadCustomersData() {
+  if (!customersTableBody) return;
+  customersTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-secondary">Loading...</td></tr>`;
+  
+  try {
+    const res = await fetch('/api/customers', {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed to load customers');
+    
+    const customers: Customer[] = await res.json();
+    renderCustomersTable(customers);
+  } catch (error) {
+    console.error(error);
+    customersTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-error">Failed to load customers</td></tr>`;
+  }
+}
+
+function renderCustomersTable(customers: Customer[]) {
+  if (!customersTableBody) return;
+  
+  if (customers.length === 0) {
+    customersTableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-secondary">No customers found</td></tr>`;
+    return;
+  }
+  
+  customersTableBody.innerHTML = customers.map(customer => {
+    const date = new Date(customer.created_at);
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    
+    const txHtml = customer.transactions && customer.transactions.length > 0 
+      ? customer.transactions.map(tx => {
+          const txDate = new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          const statusColor = tx.status === 'successful' ? 'text-[#059669]' : tx.status === 'failed' ? 'text-error' : 'text-primary';
+          return `<div class="mb-2 last:mb-0 border-b last:border-b-0 border-outline-variant/30 pb-2 last:pb-0">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-sm text-on-surface">${escapeHtml(tx.plan_name || 'Unknown Plan')} - ₦${Number(tx.amount).toLocaleString()}</span>
+                        <span class="text-xs ${statusColor} uppercase">${escapeHtml(tx.status)}</span>
+                    </div>
+                    <div class="text-xs text-secondary mt-1">Ref: ${escapeHtml(tx.paystack_reference)} &bull; ${txDate}</div>
+                  </div>`;
+        }).join('')
+      : '<span class="text-secondary text-sm">No transactions</span>';
+
+    return `
+      <tr class="hover:bg-surface-container/50 transition-colors align-top">
+          <td class="px-6 py-4 text-secondary">
+            <div class="text-on-background font-medium">${escapeHtml(customer.phone_number || '-')}</div>
+            <div class="text-sm mt-1">${escapeHtml(customer.email || '-')}</div>
+          </td>
+          <td class="px-6 py-4 text-on-surface whitespace-nowrap">${dateStr}</td>
+          <td class="px-6 py-4">
+              <details class="cursor-pointer group">
+                  <summary class="font-label-sm text-label-sm text-primary hover:underline list-none flex items-center gap-1">
+                      ${customer.transactions ? customer.transactions.length : 0} Transaction(s)
+                      <span class="material-symbols-outlined text-[16px] group-open:rotate-180 transition-transform">expand_more</span>
+                  </summary>
+                  <div class="mt-3 bg-surface-container-low rounded-lg p-3 border border-outline-variant/50 max-h-[200px] overflow-y-auto cursor-default" onclick="event.preventDefault();">
+                      ${txHtml}
+                  </div>
+              </details>
+          </td>
+      </tr>
+    `;
+  }).join('');
+}
 
 // Start
 init();

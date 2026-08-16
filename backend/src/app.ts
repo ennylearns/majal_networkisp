@@ -722,6 +722,34 @@ app.get('/api/vouchers', requireAdmin, async (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/customers', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT c.*, 
+             COALESCE(
+               json_agg(
+                 json_build_object(
+                   'id', t.id,
+                   'plan_name', p.name,
+                   'amount', t.amount,
+                   'status', t.status,
+                   'created_at', t.created_at,
+                   'paystack_reference', t.paystack_reference
+                 ) ORDER BY t.created_at DESC
+               ) FILTER (WHERE t.id IS NOT NULL), '[]'
+             ) as transactions
+      FROM customers c
+      LEFT JOIN transactions t ON c.id = t.customer_id
+      LEFT JOIN plans p ON t.plan_id = p.id
+      GROUP BY c.id
+      ORDER BY c.created_at DESC
+    `);
+    return res.json(result.rows);
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to fetch customers' });
+  }
+});
+
 app.put('/api/vouchers/:id/disable', requireAdmin, async (req: Request, res: Response) => {
   const { id } = req.params;
   const { code } = req.body || {};
