@@ -118,6 +118,18 @@ const btnSearchVouchers = document.getElementById('btn-search-vouchers');
 // Customers View Elements
 const customersTableBody = document.getElementById('customers-table-body');
 
+// Audit Logs View Elements
+const fullAuditLogsTableBody = document.getElementById('full-audit-logs-table-body');
+const auditFilterAction = document.getElementById('audit-filter-action') as HTMLSelectElement;
+const auditFilterEntity = document.getElementById('audit-filter-entity') as HTMLSelectElement;
+const btnFilterAuditLogs = document.getElementById('btn-filter-audit-logs');
+const btnAuditPrev = document.getElementById('btn-audit-prev') as HTMLButtonElement;
+const btnAuditNext = document.getElementById('btn-audit-next') as HTMLButtonElement;
+const auditPaginationInfo = document.getElementById('audit-pagination-info');
+
+let currentAuditPage = 1;
+const AUDIT_PAGE_SIZE = 20;
+
 // Initialize
 function init() {
   if (!authToken) {
@@ -310,8 +322,100 @@ function switchView(targetView: string) {
     loadVouchersData();
   } else if (targetView === 'customers') {
     loadCustomersData();
+  } else if (targetView === 'audit-logs') {
+    currentAuditPage = 1;
+    loadFullAuditLogsData();
   }
 }
+
+// Full Audit Logs Logic
+async function loadFullAuditLogsData() {
+  if (!fullAuditLogsTableBody) return;
+  fullAuditLogsTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-secondary">Loading...</td></tr>`;
+  
+  try {
+    const actionType = auditFilterAction?.value || '';
+    const targetEntity = auditFilterEntity?.value || '';
+    const offset = (currentAuditPage - 1) * AUDIT_PAGE_SIZE;
+    
+    let url = `/api/audit-logs?limit=${AUDIT_PAGE_SIZE}&offset=${offset}`;
+    if (actionType) url += `&actionType=${encodeURIComponent(actionType)}`;
+    if (targetEntity) url += `&targetEntity=${encodeURIComponent(targetEntity)}`;
+    
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed to load audit logs');
+    
+    const logs: AuditLog[] = await res.json();
+    renderFullAuditLogsTable(logs);
+    
+    // Update pagination state
+    if (btnAuditPrev) btnAuditPrev.disabled = currentAuditPage === 1;
+    if (btnAuditNext) btnAuditNext.disabled = logs.length < AUDIT_PAGE_SIZE;
+    
+    if (auditPaginationInfo) {
+      if (logs.length === 0) {
+        auditPaginationInfo.textContent = 'No logs found';
+      } else {
+        const start = offset + 1;
+        const end = offset + logs.length;
+        auditPaginationInfo.textContent = `Showing logs ${start}-${end}`;
+      }
+    }
+    
+  } catch (error) {
+    console.error(error);
+    fullAuditLogsTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-error">Failed to load audit logs</td></tr>`;
+  }
+}
+
+function renderFullAuditLogsTable(logs: AuditLog[]) {
+  if (!fullAuditLogsTableBody) return;
+  
+  if (logs.length === 0) {
+    fullAuditLogsTableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-secondary">No audit logs match criteria</td></tr>`;
+    return;
+  }
+  
+  fullAuditLogsTableBody.innerHTML = logs.map(log => {
+    const date = new Date(log.created_at);
+    const dateStr = `${date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}`;
+    
+    const detailsStr = log.details ? JSON.stringify(log.details) : '-';
+
+    return `
+      <tr class="hover:bg-surface-container/50 transition-colors">
+          <td class="px-6 py-4 text-on-surface whitespace-nowrap">${dateStr}</td>
+          <td class="px-6 py-4 text-on-background font-medium">${escapeHtml(log.action_type)}</td>
+          <td class="px-6 py-4 text-secondary">${escapeHtml(log.target_entity || '-')} ${log.target_id ? '#' + log.target_id : ''}</td>
+          <td class="px-6 py-4">
+              <span class="inline-block max-w-sm truncate text-secondary text-sm" title="${escapeHtml(detailsStr)}">
+                  ${escapeHtml(detailsStr)}
+              </span>
+          </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+btnFilterAuditLogs?.addEventListener('click', () => {
+  currentAuditPage = 1;
+  loadFullAuditLogsData();
+});
+
+btnAuditPrev?.addEventListener('click', () => {
+  if (currentAuditPage > 1) {
+    currentAuditPage--;
+    loadFullAuditLogsData();
+  }
+});
+
+btnAuditNext?.addEventListener('click', () => {
+  currentAuditPage++;
+  loadFullAuditLogsData();
+});
 
 // Load Routers Data
 async function loadRoutersData() {

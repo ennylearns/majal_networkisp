@@ -162,7 +162,7 @@
                 <span class="material-symbols-outlined" data-icon="group">group</span>
                 <span class="font-label-sm text-label-sm">Customers</span>
             </a>
-            <a class="text-surface-variant flex items-center gap-3 px-4 py-3 mx-2 hover:bg-primary-fixed-dim/10 transition-colors rounded-xl" href="#">
+            <a class="nav-link text-surface-variant flex items-center gap-3 px-4 py-3 mx-2 hover:bg-primary-fixed-dim/10 transition-colors rounded-xl" href="#" data-target="audit-logs">
                 <span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
                 <span class="font-label-sm text-label-sm">Audit Logs</span>
             </a>
@@ -432,6 +432,68 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Audit Logs View -->
+            <div id="view-audit-logs" class="max-w-container-max mx-auto space-y-8 view-section hidden">
+                <div class="flex justify-between items-end flex-wrap gap-4">
+                    <div>
+                        <h1 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background">Audit Logs</h1>
+                        <p class="font-body-md text-body-md text-secondary mt-1">Full, searchable history of system events.</p>
+                    </div>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <select id="audit-filter-action" class="bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-body-md font-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="">All Actions</option>
+                            <option value="PLAN_CREATED">Plan Created</option>
+                            <option value="PLAN_ENABLED">Plan Enabled</option>
+                            <option value="PLAN_DISABLED">Plan Disabled</option>
+                            <option value="ROUTER_PROVISIONING_STARTED">Router Provisioning Started</option>
+                            <option value="ROUTER_PROVISIONED">Router Provisioned</option>
+                            <option value="ROUTER_STATUS_CHANGED">Router Status Changed</option>
+                            <option value="ROUTER_PROVISIONING_FAILED">Router Provisioning Failed</option>
+                            <option value="PAYMENT_RECEIVED">Payment Received</option>
+                            <option value="VOUCHER_DISABLED">Voucher Disabled</option>
+                        </select>
+                        <select id="audit-filter-entity" class="bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-body-md font-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="">All Entities</option>
+                            <option value="plan">Plan</option>
+                            <option value="router">Router</option>
+                            <option value="transaction">Transaction</option>
+                            <option value="voucher">Voucher</option>
+                        </select>
+                        <button id="btn-filter-audit-logs" class="bg-primary text-on-primary px-4 py-2 rounded-xl font-label-sm text-label-sm flex items-center gap-2 hover:opacity-90 transition-opacity">
+                            Filter
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-surface-container-low border-b border-outline-variant">
+                                    <th class="px-6 py-3 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Action Type</th>
+                                    <th class="px-6 py-3 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Entity</th>
+                                    <th class="px-6 py-3 font-label-sm text-label-sm text-secondary uppercase tracking-wider">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="full-audit-logs-table-body" class="divide-y divide-outline-variant font-body-md text-body-md">
+                                <tr>
+                                    <td colspan="4" class="px-6 py-8 text-center text-secondary">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="px-6 py-4 border-t border-outline-variant flex justify-between items-center bg-surface">
+                        <span id="audit-pagination-info" class="text-sm text-secondary">Showing logs</span>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-audit-prev" class="px-3 py-1 border border-outline-variant rounded hover:bg-surface-variant disabled:opacity-50 text-sm">Previous</button>
+                            <button id="btn-audit-next" class="px-3 py-1 border border-outline-variant rounded hover:bg-surface-variant disabled:opacity-50 text-sm">Next</button>
+                        </div>
                     </div>
                 </div>
             </div>
