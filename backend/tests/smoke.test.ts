@@ -1,14 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import { app, setMikroTikService, setPaymentService } from '../src/app';
 import { FakeMikroTikService } from '../src/services/MikroTikService';
 import { FakePaymentService } from '../src/services/PaymentService';
+import { pool } from '../src/db';
 
 describe('Backend Foundation Smoke Test', () => {
   let fakeMikroTik: FakeMikroTikService;
   let fakePayment: FakePaymentService;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(pool, 'query').mockResolvedValue({ rows: [] } as any);
     fakeMikroTik = new FakeMikroTikService();
     fakePayment = new FakePaymentService();
     setMikroTikService(fakeMikroTik);

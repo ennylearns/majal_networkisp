@@ -83,7 +83,7 @@ app.post('/api/routers', requireAdmin, async (req: Request, res: Response) => {
       [name, location, 'provisioning']
     );
     const routerId = result.rows[0].id;
-    const { token } = await provisioningService.generateToken(routerId);
+    const { token, apiPassword, tunnelIp } = await provisioningService.generateToken(routerId);
     
     const domain = req.get('host') || 'your-domain.com';
     const protocol = 'https'; // Explicitly use https for Winbox command as required by spec
@@ -92,9 +92,81 @@ app.post('/api/routers', requireAdmin, async (req: Request, res: Response) => {
 
     await auditService.logAction(getAdminId(req), 'ROUTER_PROVISIONING_STARTED', 'router', routerId, { token });
 
-    return res.status(201).json({ id: routerId, token, command });
+    return res.status(201).json({ id: routerId, token, command, apiPassword, tunnelIp });
   } catch (error) {
     return res.status(500).json({ error: 'Failed to register router' });
+  }
+});
+
+app.post('/api/routers/:id/provision-token', requireAdmin, async (req: Request, res: Response) => {
+  const routerId = parseInt(req.params.id as string, 10);
+  if (isNaN(routerId)) {
+    return res.status(400).json({ error: 'Invalid router ID' });
+  }
+
+  try {
+    const checkResult = await pool.query('SELECT id, name FROM routers WHERE id = $1', [routerId]);
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Router not found' });
+    }
+
+    const { token, apiPassword, tunnelIp } = await provisioningService.generateToken(routerId);
+
+    const domain = req.get('host') || 'your-domain.com';
+    const protocol = 'https';
+    const url = `${protocol}://${domain}/provision/${token}`;
+    const command = `/tool fetch url="${url}" mode=https dst-path=provision.rsc; /import file-name=provision.rsc`;
+
+    await auditService.logAction(getAdminId(req), 'ROUTER_PROVISIONING_TOKEN_GENERATED', 'router', routerId, { token });
+
+    return res.json({
+      id: routerId,
+      token,
+      apiPassword,
+      tunnelIp,
+      command
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to generate provisioning token' });
+  }
+});
+
+app.get('/api/routers/:id/provision.rsc', requireAdmin, async (req: Request, res: Response) => {
+  const routerId = parseInt(req.params.id as string, 10);
+  if (isNaN(routerId)) {
+    return res.status(400).json({ error: 'Invalid router ID' });
+  }
+
+  try {
+    const result = await pool.query('SELECT * FROM routers WHERE id = $1', [routerId]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Router not found' });
+    }
+    const router = result.rows[0];
+
+    const tokenResult = await pool.query(
+      'SELECT token FROM router_provisioning_tokens WHERE router_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1',
+      [routerId]
+    );
+    const token = tokenResult.rows[0]?.token || 'unknown';
+
+    const config = {
+      routerId,
+      token,
+      hotspotSubnet: router.hotspot_subnet || '192.168.88.0/24',
+      hotspotGateway: router.hotspot_gateway || '192.168.88.1',
+      hotspotPoolRange: router.hotspot_pool_range || '192.168.88.10-192.168.88.254',
+      wireguardPeerConfig: router.wireguard_peer_config || 'endpoint=wg.majal.com:51820',
+      wireguardPublicKey: router.wireguard_public_key || 'dummy-public-key',
+      apiPassword: router.api_password || '',
+      wireguardTunnelIp: router.wireguard_tunnel_ip || '',
+      reportUrl: `https://${req.get('host') || 'api.majal.com'}/api/provision-report`
+    };
+
+    const script = generateRscScript(config);
+    return res.type('text/plain').send(script.trim());
+  } catch (error) {
+    return res.status(500).json({ error: 'Failed to generate provisioning script' });
   }
 });
 

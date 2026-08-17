@@ -4,9 +4,9 @@
 
 **Blocked by:** 02 — RouterOS Script (`.rsc`) Generation with WireGuard IP & API User
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `POST /api/routers/:id/provision-token` route handler returns the token and generated credential metadata
-- [ ] `GET /api/routers/:id/provision.rsc` retrieves stored router `wireguard_tunnel_ip` and `api_password` and passes them to `generateRscScript`
-- [ ] `RealMikroTikService` successfully loads `wireguard_tunnel_ip` and `api_password` from database for provisioned routers
-- [ ] All route and provisioning integration tests pass (`tests/provisioning.test.ts`, `tests/fleet.test.ts`, etc.)
+- [x] `POST /api/routers/:id/provision-token` route handler returns the token and generated credential metadata
+- [x] `GET /api/routers/:id/provision.rsc` retrieves stored router `wireguard_tunnel_ip` and `api_password` and passes them to `generateRscScript`
+- [x] `RealMikroTikService` successfully loads `wireguard_tunnel_ip` and `api_password` from database for provisioned routers
+- [x] All route and provisioning integration tests pass (`tests/provisioning.test.ts`, `tests/fleet.test.ts`, etc.)
