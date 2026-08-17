@@ -19,6 +19,8 @@ CREATE TABLE routers (
     hotspot_pool_range VARCHAR(100),
     wireguard_peer_config TEXT,
     wireguard_public_key VARCHAR(255),
+    wireguard_tunnel_ip VARCHAR(45),
+    api_password VARCHAR(255),
     last_seen_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

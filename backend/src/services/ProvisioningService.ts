@@ -1,12 +1,22 @@
 import crypto from 'crypto';
 import { query } from '../db';
 
+export interface ProvisioningCredentials {
+  token: string;
+  apiPassword: string;
+  tunnelIp: string;
+}
+
 export class ProvisioningService {
   /**
-   * Generates a unique, single-use, expiring provisioning token for a given router.
+   * Generates a unique, single-use, expiring provisioning token for a given router,
+   * allocates a dynamic WireGuard tunnel IP (10.100.0.0/16), generates a 32-character hex API password,
+   * updates the router record, and returns the credentials.
    */
-  async generateToken(routerId: number): Promise<string> {
+  async generateToken(routerId: number): Promise<ProvisioningCredentials> {
     const token = crypto.randomBytes(32).toString('hex');
+    const apiPassword = crypto.randomBytes(16).toString('hex');
+    const tunnelIp = `10.100.${Math.floor(routerId / 256)}.${routerId % 256}`;
     
     // Set expiry to 24 hours from now
     const expiresAt = new Date();
@@ -14,7 +24,7 @@ export class ProvisioningService {
 
     // This handles upsert (since router_id is UNIQUE) if a previous token existed, 
     // we can either replace it or just insert a new one. In PostgreSQL we can use ON CONFLICT.
-    const sql = `
+    const tokenSql = `
       INSERT INTO router_provisioning_tokens (token, router_id, expires_at)
       VALUES ($1, $2, $3)
       ON CONFLICT (router_id) 
@@ -27,8 +37,20 @@ export class ProvisioningService {
       RETURNING token
     `;
     
-    const result = await query(sql, [token, routerId, expiresAt]);
-    return result.rows[0].token;
+    const result = await query(tokenSql, [token, routerId, expiresAt]);
+
+    const routerUpdateSql = `
+      UPDATE routers 
+      SET wireguard_tunnel_ip = $1, api_password = $2 
+      WHERE id = $3
+    `;
+    await query(routerUpdateSql, [tunnelIp, apiPassword, routerId]);
+
+    return {
+      token: result.rows[0].token,
+      apiPassword,
+      tunnelIp,
+    };
   }
 
   /**

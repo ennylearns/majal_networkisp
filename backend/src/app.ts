@@ -83,7 +83,7 @@ app.post('/api/routers', requireAdmin, async (req: Request, res: Response) => {
       [name, location, 'provisioning']
     );
     const routerId = result.rows[0].id;
-    const token = await provisioningService.generateToken(routerId);
+    const { token } = await provisioningService.generateToken(routerId);
     
     const domain = req.get('host') || 'your-domain.com';
     const protocol = 'https'; // Explicitly use https for Winbox command as required by spec

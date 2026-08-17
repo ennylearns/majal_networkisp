@@ -4,11 +4,11 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `routers` table includes `wireguard_tunnel_ip VARCHAR(45)` and `api_password VARCHAR(255)` columns in schema
-- [ ] `ProvisioningService.generateToken(routerId)` computes dynamic tunnel IP within `10.100.0.0/16`
-- [ ] `ProvisioningService.generateToken(routerId)` generates a cryptographically random 32-character hex password
-- [ ] `ProvisioningService.generateToken(routerId)` updates `routers` record with the new `wireguard_tunnel_ip` and `api_password`
-- [ ] `ProvisioningService.generateToken(routerId)` returns `{ token, apiPassword, tunnelIp }`
-- [ ] Unit and database integration tests verify credential generation and persistence
+- [x] `routers` table includes `wireguard_tunnel_ip VARCHAR(45)` and `api_password VARCHAR(255)` columns in schema
+- [x] `ProvisioningService.generateToken(routerId)` computes dynamic tunnel IP within `10.100.0.0/16`
+- [x] `ProvisioningService.generateToken(routerId)` generates a cryptographically random 32-character hex password
+- [x] `ProvisioningService.generateToken(routerId)` updates `routers` record with the new `wireguard_tunnel_ip` and `api_password`
+- [x] `ProvisioningService.generateToken(routerId)` returns `{ token, apiPassword, tunnelIp }`
+- [x] Unit and database integration tests verify credential generation and persistence

@@ -18,16 +18,61 @@ describe('ProvisioningService', () => {
   });
 
   describe('generateToken', () => {
-    it('should generate a unique token and store it', async () => {
-      vi.mocked(db.query).mockResolvedValueOnce({ rows: [{ token: 'abc-123' }] } as any);
-      
-      const token = await service.generateToken(1);
-      
-      expect(token).toBe('abc-123');
-      expect(db.query).toHaveBeenCalledWith(
+    it('should generate token, dynamic tunnel IP, random 32-char hex API password, update router, and return credentials', async () => {
+      vi.mocked(db.query)
+        .mockResolvedValueOnce({ rows: [{ token: 'abc-123' }] } as any) // insert into router_provisioning_tokens
+        .mockResolvedValueOnce({ rowCount: 1 } as any); // update routers
+
+      const creds = await service.generateToken(1);
+
+      expect(creds).toEqual({
+        token: 'abc-123',
+        apiPassword: expect.stringMatching(/^[0-9a-f]{32}$/),
+        tunnelIp: '10.100.0.1',
+      });
+
+      expect(db.query).toHaveBeenNthCalledWith(
+        1,
         expect.stringContaining('INSERT INTO router_provisioning_tokens'),
-        expect.arrayContaining([1, expect.any(String), expect.any(Date)])
+        expect.arrayContaining([expect.any(String), 1, expect.any(Date)])
       );
+
+      expect(db.query).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining('UPDATE routers'),
+        ['10.100.0.1', creds.apiPassword, 1]
+      );
+    });
+
+    it('should calculate dynamic tunnel IP correctly across subnet boundaries', async () => {
+      vi.mocked(db.query)
+        .mockResolvedValueOnce({ rows: [{ token: 'token-256' }] } as any)
+        .mockResolvedValueOnce({ rowCount: 1 } as any);
+
+      const creds256 = await service.generateToken(256);
+      expect(creds256.tunnelIp).toBe('10.100.1.0');
+
+      vi.mocked(db.query)
+        .mockResolvedValueOnce({ rows: [{ token: 'token-515' }] } as any)
+        .mockResolvedValueOnce({ rowCount: 1 } as any);
+
+      const creds515 = await service.generateToken(515);
+      expect(creds515.tunnelIp).toBe('10.100.2.3');
+    });
+
+    it('should generate distinct API passwords on subsequent token generation', async () => {
+      vi.mocked(db.query)
+        .mockResolvedValueOnce({ rows: [{ token: 'tok-1' }] } as any)
+        .mockResolvedValueOnce({ rowCount: 1 } as any)
+        .mockResolvedValueOnce({ rows: [{ token: 'tok-2' }] } as any)
+        .mockResolvedValueOnce({ rowCount: 1 } as any);
+
+      const first = await service.generateToken(1);
+      const second = await service.generateToken(1);
+
+      expect(first.apiPassword).not.toBe(second.apiPassword);
+      expect(first.apiPassword).toHaveLength(32);
+      expect(second.apiPassword).toHaveLength(32);
     });
   });
 
