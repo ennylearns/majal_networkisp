@@ -4,11 +4,11 @@
 
 **Blocked by:** 01 — Schema & Provisioning Credential Generation
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `RouterConfig` interface requires `apiPassword` and `wireguardTunnelIp`
-- [ ] `generateRscScript` includes `/user add name=majal-api password="<apiPassword>" group=full`
-- [ ] `generateRscScript` includes `/ip service set www address=10.100.0.0/16 disabled=no`
-- [ ] `generateRscScript` includes `/ip service set www-ssl disabled=yes`
-- [ ] `generateRscScript` includes `/ip address add address=<wireguardTunnelIp>/24 interface=wireguard1`
-- [ ] Test suite in `tests/rsc.test.ts` asserts all new script commands and parameters
+- [x] `RouterConfig` interface requires `apiPassword` and `wireguardTunnelIp`
+- [x] `generateRscScript` includes `/user add name=majal-api password="<apiPassword>" group=full`
+- [x] `generateRscScript` includes `/ip service set www address=10.100.0.0/16 disabled=no`
+- [x] `generateRscScript` includes `/ip service set www-ssl disabled=yes`
+- [x] `generateRscScript` includes `/ip address add address=<wireguardTunnelIp>/24 interface=wireguard1`
+- [x] Test suite in `tests/rsc.test.ts` asserts all new script commands and parameters

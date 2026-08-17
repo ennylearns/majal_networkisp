@@ -132,6 +132,8 @@ app.get('/provision/:token', async (req: Request, res: Response) => {
       hotspotPoolRange: router.hotspot_pool_range || '192.168.88.10-192.168.88.254',
       wireguardPeerConfig: router.wireguard_peer_config || 'endpoint=wg.majal.com:51820',
       wireguardPublicKey: router.wireguard_public_key || 'dummy-public-key',
+      apiPassword: router.api_password || '',
+      wireguardTunnelIp: router.wireguard_tunnel_ip || '',
       reportUrl: `https://${req.get('host') || 'api.majal.com'}/api/provision-report`
     };
 

@@ -5,6 +5,8 @@ export interface RouterConfig {
   hotspotPoolRange: string;
   wireguardPeerConfig: string;
   wireguardPublicKey: string;
+  apiPassword: string;
+  wireguardTunnelIp: string;
   token?: string;
   reportUrl?: string;
 }
@@ -64,9 +66,15 @@ export function generateRscScript(config: RouterConfig): string {
 /ip hotspot walled-garden add dst-host="*majal.com" action=allow
 /ip hotspot walled-garden add dst-host="*paystack.com" action=allow
 
-# 7. WireGuard Peer
+# 7. WireGuard Peer & Interface Address
 /interface wireguard add listen-port=51820 name=wireguard1
 /interface wireguard peers add interface=wireguard1 public-key="${config.wireguardPublicKey}" ${config.wireguardPeerConfig}
+/ip address add address=${config.wireguardTunnelIp}/24 interface=wireguard1
+
+# 8. API User & REST Service
+/user add name=majal-api password="${config.apiPassword}" group=full
+/ip service set www address=10.100.0.0/16 disabled=no
+/ip service set www-ssl disabled=yes
 
 /system identity set name="MAJAL-Router-${config.routerId}"
 /log info "Provisioning complete for MAJAL network"
