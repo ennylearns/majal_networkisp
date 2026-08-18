@@ -29,13 +29,15 @@ Multi-context repo (presence of `CONTEXT-MAP.md` at the root):
 /
 ├── CONTEXT-MAP.md
 ├── docs/adr/                          ← system-wide decisions
-└── src/
-    ├── ordering/
-    │   ├── CONTEXT.md
-    │   └── docs/adr/                  ← context-specific decisions
-    └── billing/
-        ├── CONTEXT.md
-        └── docs/adr/
+├── backend/
+│   ├── CONTEXT.md
+│   └── docs/adr/                      ← backend-specific decisions
+├── captive-portal/
+│   ├── CONTEXT.md
+│   └── docs/adr/                      ← captive portal decisions
+└── majal-isp-admin/
+    ├── CONTEXT.md
+    └── docs/adr/                      ← admin portal decisions
 ```
 
 ## Use the glossary's vocabulary

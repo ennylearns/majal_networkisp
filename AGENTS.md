@@ -10,4 +10,4 @@ Canonical label set (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for
 
 ### Domain docs
 
-Single-context layout (`CONTEXT.md` + `docs/adr/`). See `docs/agents/domain.md`.
+Multi-context layout (`CONTEXT-MAP.md` + per-package `CONTEXT.md` and `docs/adr/`). See `docs/agents/domain.md`.
