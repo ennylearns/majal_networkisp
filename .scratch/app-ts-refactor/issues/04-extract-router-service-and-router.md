@@ -4,9 +4,9 @@
 
 **Blocked by:** 01 — Foundational Domain Error Hierarchy and Route Middleware
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] `RouterService` encapsulates SQL queries for `routers` and `router_provisioning_tokens`
-- [ ] Integrates with `ProvisioningService` and `MikroTikService` across clean interfaces
-- [ ] `createRouterRouter` handles `/api/routers` and provisioning endpoints with validation and error mapping
-- [ ] Existing automated tests for router registration and provisioning pass without regression
+- [x] `RouterService` encapsulates SQL queries for `routers` and `router_provisioning_tokens`
+- [x] Integrates with `ProvisioningService` and `MikroTikService` across clean interfaces
+- [x] `createRouterRouter` handles `/api/routers` and provisioning endpoints with validation and error mapping
+- [x] Existing automated tests for router registration and provisioning pass without regression

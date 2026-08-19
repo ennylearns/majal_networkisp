@@ -5,13 +5,14 @@ import { MikroTikService, FakeMikroTikService } from './services/MikroTikService
 import { PaymentService, FakePaymentService } from './services/PaymentService';
 import { pool } from './db';
 import { ProvisioningService } from './services/ProvisioningService';
-import { generateRscScript } from './services/RscGenerator';
 import { voucherService } from './services/VoucherService';
 import { AuditService } from './services/AuditService';
 import { PlanService } from './services/PlanService';
 import { createPlanRouter } from './routes/plans';
 import { CustomerService } from './services/CustomerService';
 import { createCustomerRouter } from './routes/customers';
+import { RouterService } from './services/RouterService';
+import { createRouterRouter } from './routes/routers';
 import { getAdminId, requireAdmin } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -19,6 +20,7 @@ const provisioningService = new ProvisioningService();
 const auditService = new AuditService(pool);
 const planService = new PlanService(pool, () => mikroTikService, auditService);
 const customerService = new CustomerService(pool);
+const routerService = new RouterService(pool, provisioningService, auditService, () => mikroTikService);
 
 const app = express();
 app.use(express.json());
@@ -63,198 +65,23 @@ app.post('/api/auth', async (req: Request, res: Response) => {
   return res.status(401).json({ error: 'Invalid credentials' });
 });
 
-app.post('/api/routers', requireAdmin, async (req: Request, res: Response) => {
-  const { name, location } = req.body;
-  try {
-    const result = await pool.query(
-      'INSERT INTO routers (name, location, status) VALUES ($1, $2, $3) RETURNING id',
-      [name, location, 'provisioning']
-    );
-    const routerId = result.rows[0].id;
-    const { token, apiPassword, tunnelIp } = await provisioningService.generateToken(routerId);
-    
-    const domain = req.get('host') || 'your-domain.com';
-    const protocol = 'https'; // Explicitly use https for Winbox command as required by spec
-    const url = `${protocol}://${domain}/provision/${token}`;
-    const command = `/tool fetch url="${url}" mode=https dst-path=provision.rsc; /import file-name=provision.rsc`;
-
-    await auditService.logAction(getAdminId(req), 'ROUTER_PROVISIONING_STARTED', 'router', routerId, { token });
-
-    return res.status(201).json({ id: routerId, token, command, apiPassword, tunnelIp });
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to register router' });
-  }
-});
-
-app.post('/api/routers/:id/provision-token', requireAdmin, async (req: Request, res: Response) => {
-  const routerId = parseInt(req.params.id as string, 10);
-  if (isNaN(routerId)) {
-    return res.status(400).json({ error: 'Invalid router ID' });
-  }
-
-  try {
-    const checkResult = await pool.query('SELECT id, name FROM routers WHERE id = $1', [routerId]);
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Router not found' });
-    }
-
-    const { token, apiPassword, tunnelIp } = await provisioningService.generateToken(routerId);
-
-    const domain = req.get('host') || 'your-domain.com';
-    const protocol = 'https';
-    const url = `${protocol}://${domain}/provision/${token}`;
-    const command = `/tool fetch url="${url}" mode=https dst-path=provision.rsc; /import file-name=provision.rsc`;
-
-    await auditService.logAction(getAdminId(req), 'ROUTER_PROVISIONING_TOKEN_GENERATED', 'router', routerId, { token });
-
-    return res.json({
-      id: routerId,
-      token,
-      apiPassword,
-      tunnelIp,
-      command
-    });
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to generate provisioning token' });
-  }
-});
-
-app.get('/api/routers/:id/provision.rsc', requireAdmin, async (req: Request, res: Response) => {
-  const routerId = parseInt(req.params.id as string, 10);
-  if (isNaN(routerId)) {
-    return res.status(400).json({ error: 'Invalid router ID' });
-  }
-
-  try {
-    const result = await pool.query('SELECT * FROM routers WHERE id = $1', [routerId]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Router not found' });
-    }
-    const router = result.rows[0];
-
-    const tokenResult = await pool.query(
-      'SELECT token FROM router_provisioning_tokens WHERE router_id = $1 AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1',
-      [routerId]
-    );
-    const token = tokenResult.rows[0]?.token || 'unknown';
-
-    const config = {
-      routerId,
-      token,
-      hotspotSubnet: router.hotspot_subnet || '192.168.88.0/24',
-      hotspotGateway: router.hotspot_gateway || '192.168.88.1',
-      hotspotPoolRange: router.hotspot_pool_range || '192.168.88.10-192.168.88.254',
-      wireguardPeerConfig: router.wireguard_peer_config || 'endpoint=wg.majal.com:51820',
-      wireguardPublicKey: router.wireguard_public_key || 'dummy-public-key',
-      apiPassword: router.api_password || '',
-      wireguardTunnelIp: router.wireguard_tunnel_ip || '',
-      reportUrl: `https://${req.get('host') || 'api.majal.com'}/api/provision-report`
-    };
-
-    const script = generateRscScript(config);
-    return res.type('text/plain').send(script.trim());
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to generate provisioning script' });
-  }
-});
-
-app.post('/api/routers/:id/revoke-token', requireAdmin, async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query('SELECT token FROM router_provisioning_tokens WHERE router_id = $1 AND revoked_at IS NULL AND used_at IS NULL', [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'No active token found for this router' });
-    }
-    await provisioningService.revokeToken(result.rows[0].token);
-    return res.json({ success: true });
-  } catch (error) {
-    return res.status(400).json({ error: (error as Error).message });
-  }
-});
-
 app.get('/provision/:token', async (req: Request, res: Response) => {
   const { token } = req.params;
   try {
-    const routerId = await provisioningService.validateAndUseToken(token as string, 'Fetched provisioning script');
-    
-    const result = await pool.query('SELECT * FROM routers WHERE id = $1', [routerId]);
-    if (result.rows.length === 0) {
-      throw new Error('Router not found');
-    }
-    const router = result.rows[0];
-    
-    // Default config values if they are null in DB (or could throw error)
-    const config = {
-      routerId,
-      token: token as string, // pass token to RscGenerator
-      hotspotSubnet: router.hotspot_subnet || '192.168.88.0/24',
-      hotspotGateway: router.hotspot_gateway || '192.168.88.1',
-      hotspotPoolRange: router.hotspot_pool_range || '192.168.88.10-192.168.88.254',
-      wireguardPeerConfig: router.wireguard_peer_config || 'endpoint=wg.majal.com:51820',
-      wireguardPublicKey: router.wireguard_public_key || 'dummy-public-key',
-      apiPassword: router.api_password || '',
-      wireguardTunnelIp: router.wireguard_tunnel_ip || '',
-      reportUrl: `https://${req.get('host') || 'api.majal.com'}/api/provision-report`
-    };
-
-    const script = generateRscScript(config);
-    return res.type('text/plain').send(script.trim());
+    const script = await routerService.fetchProvisioningScriptByToken(token as string, req.get('host'));
+    return res.type('text/plain').send(script);
   } catch (error) {
     return res.status(400).send('# Provisioning failed: ' + (error as Error).message);
   }
 });
 
-app.post('/api/provision-report', async (req: Request, res: Response) => {
+app.post('/api/provision-report', async (req: Request, res: Response, next: NextFunction) => {
   const { token, status, message } = req.body;
-  if (!token) return res.status(400).json({ error: 'Token required' });
-  
   try {
-    const tokenResult = await pool.query('SELECT router_id FROM router_provisioning_tokens WHERE token = $1', [token]);
-    const routerId = tokenResult.rows[0]?.router_id;
-
-    // We already marked it used when it was fetched, but we can update the result.
-    // A proper implementation might wait until this report to mark it used.
-    // For now we just update the provisioning_result.
-    await pool.query(`
-      UPDATE router_provisioning_tokens 
-      SET provisioning_result = $1 
-      WHERE token = $2
-    `, [`${status}: ${message}`, token]);
-    
-    // Also update router status
-    if (status === 'success') {
-      await pool.query(`
-        UPDATE routers 
-        SET status = 'online', last_seen_at = CURRENT_TIMESTAMP 
-        WHERE id = $1
-      `, [routerId]);
-      await auditService.logAction(null, 'ROUTER_PROVISIONED', 'router', routerId, { status: 'success', message });
-      await auditService.logAction(null, 'ROUTER_STATUS_CHANGED', 'router', routerId, { status: 'online' });
-    } else {
-      await pool.query(`
-        UPDATE routers 
-        SET status = 'error', last_seen_at = CURRENT_TIMESTAMP 
-        WHERE id = $1
-      `, [routerId]);
-      await auditService.logAction(null, 'ROUTER_PROVISIONING_FAILED', 'router', routerId, { status: 'error', message });
-      await auditService.logAction(null, 'ROUTER_STATUS_CHANGED', 'router', routerId, { status: 'error' });
-    }
+    await routerService.handleProvisionReport({ token, status, message });
     return res.json({ success: true });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to save report' });
-  }
-});
-
-app.get('/api/routers', requireAdmin, async (req: Request, res: Response) => {
-  try {
-    const result = await pool.query(`
-      SELECT id, name, location, status, routeros_version, architecture, last_seen_at
-      FROM routers
-      ORDER BY id ASC
-    `);
-    return res.json(result.rows);
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to fetch routers' });
+    next(error);
   }
 });
 
@@ -415,6 +242,7 @@ app.get('/api/dashboard/analytics/revenue', requireAdmin, async (req: Request, r
 
 app.use('/api/plans', createPlanRouter(planService));
 app.use('/api/customers', createCustomerRouter(customerService));
+app.use('/api/routers', createRouterRouter(routerService));
 
 app.post('/api/checkout', async (req: Request, res: Response) => {
   const { planId, email, phoneNumber, routerId } = req.body;
@@ -755,4 +583,4 @@ app.get('/api/audit-logs', requireAdmin, async (req: Request, res: Response) => 
 
 app.use(errorHandler);
 
-export { app, mikroTikService, paymentService, auditService, planService, PlanService, customerService, CustomerService };
+export { app, mikroTikService, paymentService, auditService, planService, PlanService, customerService, CustomerService, routerService, RouterService };
