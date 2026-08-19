@@ -8,11 +8,14 @@ import { ProvisioningService } from './services/ProvisioningService';
 import { generateRscScript } from './services/RscGenerator';
 import { voucherService } from './services/VoucherService';
 import { AuditService } from './services/AuditService';
+import { PlanService } from './services/PlanService';
+import { createPlanRouter } from './routes/plans';
 import { getAdminId, requireAdmin } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 
 const provisioningService = new ProvisioningService();
 const auditService = new AuditService(pool);
+const planService = new PlanService(pool, () => mikroTikService, auditService);
 
 const app = express();
 app.use(express.json());
@@ -407,106 +410,7 @@ app.get('/api/dashboard/analytics/revenue', requireAdmin, async (req: Request, r
   }
 });
 
-app.post('/api/plans', requireAdmin, async (req: Request, res: Response) => {
-  const { name, price, data_allowance, duration, download_speed, upload_speed } = req.body;
-  
-  try {
-    const mikrotik_profile_name = name.replace(/\s+/g, '_');
-    
-    // Create the plan
-    const result = await pool.query(`
-      INSERT INTO plans (name, price, data_allowance, duration, download_speed, upload_speed, mikrotik_profile_name, enabled)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-      RETURNING *
-    `, [name, price, data_allowance, duration, download_speed, upload_speed, mikrotik_profile_name]);
-    
-    const plan = result.rows[0];
-
-    // Push the profile to all routers
-    const routersResult = await pool.query(`SELECT id FROM routers`);
-    const routers = routersResult.rows;
-
-    const rateLimit = `${upload_speed || '0'}/${download_speed || '0'}`;
-    const sessionDuration = duration ? `${duration}d` : undefined; // Assuming duration in days for this example
-    const dataLimit = data_allowance ? data_allowance.toString() : undefined;
-
-    for (const router of routers) {
-      try {
-        await mikroTikService.createProfile(router.id, mikrotik_profile_name, rateLimit, sessionDuration, dataLimit);
-      } catch (err) {
-        console.error(`Failed to push profile to router ${router.id}`);
-      }
-    }
-
-    await auditService.logAction(getAdminId(req), 'PLAN_CREATED', 'plan', plan.id, { name, price });
-
-    return res.status(201).json({ plan });
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to create plan' });
-  }
-});
-
-app.put('/api/plans/:id/enable', requireAdmin, async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query('UPDATE plans SET enabled = true WHERE id = $1 RETURNING *', [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Plan not found' });
-    }
-    await auditService.logAction(getAdminId(req), 'PLAN_ENABLED', 'plan', parseInt(id as string, 10));
-    return res.json({ plan: result.rows[0] });
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to enable plan' });
-  }
-});
-
-app.put('/api/plans/:id/disable', requireAdmin, async (req: Request, res: Response) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query('UPDATE plans SET enabled = false WHERE id = $1 RETURNING *', [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Plan not found' });
-    }
-    await auditService.logAction(getAdminId(req), 'PLAN_DISABLED', 'plan', parseInt(id as string, 10));
-    return res.json({ plan: result.rows[0] });
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to disable plan' });
-  }
-});
-
-/** Parse MikroTik speed strings like "10M", "512k", "1G" to kbps integers. */
-function parseSpeedToKbps(speed: string | null | undefined): number | null {
-  if (speed == null || speed === '') return null;
-  const match = speed.trim().match(/^(\d+(?:\.\d+)?)\s*([kKmMgG]?)(?:bps)?$/);
-  if (!match) return null;
-  const value = parseFloat(match[1]!);
-  const unit = match[2]!.toLowerCase();
-  if (unit === 'g') return Math.round(value * 1_000_000);
-  if (unit === 'm') return Math.round(value * 1_000);
-  if (unit === 'k') return Math.round(value);
-  return Math.round(value / 1000); // assume bps → kbps
-}
-
-/** Map a raw DB plan row to the shape the captive portal frontend expects. */
-function normalizePlanForPortal(row: Record<string, any>) {
-  const { data_allowance, duration, download_speed, upload_speed, ...rest } = row;
-  return {
-    ...rest,
-    data_limit_bytes: data_allowance != null ? Number(data_allowance) : null,
-    duration_minutes: duration != null ? Number(duration) * 24 * 60 : null,
-    speed_down_kbps: parseSpeedToKbps(download_speed),
-    speed_up_kbps: parseSpeedToKbps(upload_speed),
-  };
-}
-
-app.get('/api/plans', async (req: Request, res: Response) => {
-  try {
-    const result = await pool.query('SELECT * FROM plans ORDER BY id ASC');
-    return res.json(result.rows.map(normalizePlanForPortal));
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to fetch plans' });
-  }
-});
+app.use('/api/plans', createPlanRouter(planService));
 
 app.post('/api/checkout', async (req: Request, res: Response) => {
   const { planId, email, phoneNumber, routerId } = req.body;
@@ -873,4 +777,4 @@ app.get('/api/audit-logs', requireAdmin, async (req: Request, res: Response) => 
 
 app.use(errorHandler);
 
-export { app, mikroTikService, paymentService, auditService };
+export { app, mikroTikService, paymentService, auditService, planService, PlanService };
