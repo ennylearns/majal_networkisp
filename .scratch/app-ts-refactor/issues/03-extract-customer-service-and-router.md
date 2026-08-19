@@ -4,8 +4,8 @@
 
 **Blocked by:** 01 — Foundational Domain Error Hierarchy and Route Middleware
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] `CustomerService` encapsulates SQL queries for `customers` table with optional `client?: Pool | PoolClient` seam on write methods
-- [ ] `createCustomerRouter` factory handles `/api/customers` endpoints with admin authentication
-- [ ] Existing automated tests for customer queries pass without regression
+- [x] `CustomerService` encapsulates SQL queries for `customers` table with optional `client?: Pool | PoolClient` seam on write methods
+- [x] `createCustomerRouter` factory handles `/api/customers` endpoints with admin authentication
+- [x] Existing automated tests for customer queries pass without regression

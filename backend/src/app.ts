@@ -10,12 +10,15 @@ import { voucherService } from './services/VoucherService';
 import { AuditService } from './services/AuditService';
 import { PlanService } from './services/PlanService';
 import { createPlanRouter } from './routes/plans';
+import { CustomerService } from './services/CustomerService';
+import { createCustomerRouter } from './routes/customers';
 import { getAdminId, requireAdmin } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 
 const provisioningService = new ProvisioningService();
 const auditService = new AuditService(pool);
 const planService = new PlanService(pool, () => mikroTikService, auditService);
+const customerService = new CustomerService(pool);
 
 const app = express();
 app.use(express.json());
@@ -411,6 +414,7 @@ app.get('/api/dashboard/analytics/revenue', requireAdmin, async (req: Request, r
 });
 
 app.use('/api/plans', createPlanRouter(planService));
+app.use('/api/customers', createCustomerRouter(customerService));
 
 app.post('/api/checkout', async (req: Request, res: Response) => {
   const { planId, email, phoneNumber, routerId } = req.body;
@@ -682,33 +686,7 @@ app.get('/api/vouchers', requireAdmin, async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/customers', requireAdmin, async (req: Request, res: Response) => {
-  try {
-    const result = await pool.query(`
-      SELECT c.*, 
-             COALESCE(
-               json_agg(
-                 json_build_object(
-                   'id', t.id,
-                   'plan_name', p.name,
-                   'amount', t.amount,
-                   'status', t.status,
-                   'created_at', t.created_at,
-                   'paystack_reference', t.paystack_reference
-                 ) ORDER BY t.created_at DESC
-               ) FILTER (WHERE t.id IS NOT NULL), '[]'
-             ) as transactions
-      FROM customers c
-      LEFT JOIN transactions t ON c.id = t.customer_id
-      LEFT JOIN plans p ON t.plan_id = p.id
-      GROUP BY c.id
-      ORDER BY c.created_at DESC
-    `);
-    return res.json(result.rows);
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to fetch customers' });
-  }
-});
+
 
 app.put('/api/vouchers/:id/disable', requireAdmin, async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -777,4 +755,4 @@ app.get('/api/audit-logs', requireAdmin, async (req: Request, res: Response) => 
 
 app.use(errorHandler);
 
-export { app, mikroTikService, paymentService, auditService, planService, PlanService };
+export { app, mikroTikService, paymentService, auditService, planService, PlanService, customerService, CustomerService };
