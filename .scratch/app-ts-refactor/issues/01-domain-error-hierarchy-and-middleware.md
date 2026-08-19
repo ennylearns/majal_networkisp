@@ -4,9 +4,9 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Domain error classes defined: `DomainError`, `NotFoundError`, `ValidationError`, `ConflictError`, `UnauthorizedError`, `BadGatewayError`
-- [ ] Central Express error middleware translates domain errors to appropriate HTTP status codes and uniform JSON response shape `{ error: message }`
-- [ ] Unknown / unhandled internal exceptions are logged and mapped to HTTP 500
-- [ ] Auth middleware (`requireAdmin`) extracted to dedicated module
+- [x] Domain error classes defined: `DomainError`, `NotFoundError`, `ValidationError`, `ConflictError`, `UnauthorizedError`, `BadGatewayError`
+- [x] Central Express error middleware translates domain errors to appropriate HTTP status codes and uniform JSON response shape `{ error: message }`
+- [x] Unknown / unhandled internal exceptions are logged and mapped to HTTP 500
+- [x] Auth middleware (`requireAdmin`) extracted to dedicated module
